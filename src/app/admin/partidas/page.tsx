@@ -1,0 +1,293 @@
+"use client";
+
+import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { DataTable } from "@/components/admin/DataTable";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input, Label, Select } from "@/components/ui/input";
+import { matches as initialMatches } from "@/data/matches";
+import type { Match, MatchEvent } from "@/types";
+import { formatDate } from "@/lib/utils";
+
+// TODO: substituir por chamada à API quando o backend for integrado
+
+export default function AdminPartidasPage() {
+  const [rows, setRows] = useState<Match[]>(initialMatches);
+  const [editing, setEditing] = useState<Match | null>(null);
+  const [open, setOpen] = useState(false);
+
+  function handleNew() {
+    setEditing({
+      id: `m${Date.now()}`,
+      opponent: "",
+      opponentLogo: "/sponsors/adv-generico.svg",
+      date: new Date().toISOString(),
+      location: "",
+      homeAway: "casa",
+      competition: "Copa Amadora",
+      season: "2025",
+      status: "agendada",
+      scoreHome: null,
+      scoreAway: null,
+      result: null,
+      events: [],
+      lineupStart: [],
+      lineupBench: [],
+      gallery: [],
+    });
+    setOpen(true);
+  }
+
+  function handleSave(m: Match) {
+    setRows((prev) => {
+      const exists = prev.find((x) => x.id === m.id);
+      if (exists) return prev.map((x) => (x.id === m.id ? m : x));
+      return [...prev, m];
+    });
+    setOpen(false);
+    setEditing(null);
+  }
+
+  function addEvent() {
+    if (!editing) return;
+    const newEv: MatchEvent = {
+      minute: 0,
+      type: "gol",
+      playerId: "",
+      playerName: "",
+      team: "bravura",
+    };
+    setEditing({ ...editing, events: [...editing.events, newEv] });
+  }
+
+  function updateEvent(i: number, patch: Partial<MatchEvent>) {
+    if (!editing) return;
+    setEditing({
+      ...editing,
+      events: editing.events.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)),
+    });
+  }
+
+  function removeEvent(i: number) {
+    if (!editing) return;
+    setEditing({ ...editing, events: editing.events.filter((_, idx) => idx !== i) });
+  }
+
+  return (
+    <div className="p-6 md:p-10">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-3xl md:text-4xl uppercase">Partidas</h1>
+        <Button variant="primary" onClick={handleNew}>
+          <Plus className="w-4 h-4" /> Nova
+        </Button>
+      </div>
+
+      <DataTable
+        columns={[
+          { key: "date", label: "Data", render: (r) => formatDate(r.date) },
+          { key: "opponent", label: "Adversário" },
+          { key: "competition", label: "Competição" },
+          { key: "homeAway", label: "Local" },
+          { key: "status", label: "Status" },
+          {
+            key: "score",
+            label: "Placar",
+            render: (r) =>
+              r.status === "encerrada" ? `${r.scoreHome} × ${r.scoreAway}` : "—",
+          },
+        ]}
+        rows={rows}
+        onEdit={(r) => {
+          setEditing(r);
+          setOpen(true);
+        }}
+        onDelete={(r) => {
+          if (confirm("Excluir partida?")) setRows((prev) => prev.filter((x) => x.id !== r.id));
+        }}
+      />
+
+      {editing && (
+        <Dialog
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            setEditing(null);
+          }}
+          title="Editar partida"
+          className="max-w-3xl"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave(editing);
+            }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label>Adversário</Label>
+                <Input
+                  required
+                  className="mt-1"
+                  value={editing.opponent}
+                  onChange={(e) => setEditing({ ...editing, opponent: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Data</Label>
+                <Input
+                  required
+                  type="datetime-local"
+                  className="mt-1"
+                  value={editing.date.slice(0, 16)}
+                  onChange={(e) =>
+                    setEditing({ ...editing, date: new Date(e.target.value).toISOString() })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Competição</Label>
+                <Input
+                  className="mt-1"
+                  value={editing.competition}
+                  onChange={(e) => setEditing({ ...editing, competition: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Local</Label>
+                <Input
+                  className="mt-1"
+                  value={editing.location}
+                  onChange={(e) => setEditing({ ...editing, location: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Casa/Fora</Label>
+                <Select
+                  className="mt-1"
+                  value={editing.homeAway}
+                  onChange={(e) =>
+                    setEditing({ ...editing, homeAway: e.target.value as Match["homeAway"] })
+                  }
+                >
+                  <option value="casa">Casa</option>
+                  <option value="fora">Fora</option>
+                </Select>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select
+                  className="mt-1"
+                  value={editing.status}
+                  onChange={(e) =>
+                    setEditing({ ...editing, status: e.target.value as Match["status"] })
+                  }
+                >
+                  <option value="agendada">Agendada</option>
+                  <option value="em_andamento">Em andamento</option>
+                  <option value="encerrada">Encerrada</option>
+                </Select>
+              </div>
+              <div>
+                <Label>Placar casa</Label>
+                <Input
+                  type="number"
+                  className="mt-1"
+                  value={editing.scoreHome ?? ""}
+                  onChange={(e) =>
+                    setEditing({
+                      ...editing,
+                      scoreHome: e.target.value === "" ? null : +e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Placar fora</Label>
+                <Input
+                  type="number"
+                  className="mt-1"
+                  value={editing.scoreAway ?? ""}
+                  onChange={(e) =>
+                    setEditing({
+                      ...editing,
+                      scoreAway: e.target.value === "" ? null : +e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Eventos (gols, cartões, etc.)</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addEvent}>
+                  <Plus className="w-3 h-3" /> Adicionar
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {editing.events.map((ev, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[60px_1fr_1fr_1fr_auto] gap-2 items-center bg-brand-black border border-brand-border rounded-sm p-2"
+                  >
+                    <Input
+                      type="number"
+                      value={ev.minute}
+                      placeholder="min"
+                      onChange={(e) => updateEvent(i, { minute: +e.target.value })}
+                    />
+                    <Select
+                      value={ev.type}
+                      onChange={(e) => updateEvent(i, { type: e.target.value as MatchEvent["type"] })}
+                    >
+                      <option value="gol">Gol</option>
+                      <option value="assistencia">Assistência</option>
+                      <option value="cartao_amarelo">Cartão amarelo</option>
+                      <option value="cartao_vermelho">Cartão vermelho</option>
+                      <option value="substituicao">Substituição</option>
+                    </Select>
+                    <Input
+                      placeholder="Jogador"
+                      value={ev.playerName}
+                      onChange={(e) => updateEvent(i, { playerName: e.target.value })}
+                    />
+                    <Select
+                      value={ev.team}
+                      onChange={(e) => updateEvent(i, { team: e.target.value as MatchEvent["team"] })}
+                    >
+                      <option value="bravura">Bravura</option>
+                      <option value="adversario">Adversário</option>
+                    </Select>
+                    <button
+                      type="button"
+                      onClick={() => removeEvent(i)}
+                      className="text-brand-red p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setOpen(false);
+                  setEditing(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary">Salvar</Button>
+            </div>
+          </form>
+        </Dialog>
+      )}
+    </div>
+  );
+}
