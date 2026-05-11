@@ -3,16 +3,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
-import { teamStats, topScorers, topAssists, topGames, topGoalParticipations } from "@/data/stats";
+import { getCmsData } from "@/lib/cms-store";
+import { getPlayerRankings } from "@/lib/cms-stats";
 import { StatsCharts } from "./StatsCharts";
 import type { Player } from "@/types";
 
 export const metadata: Metadata = {
   title: "Estatísticas",
-  description: "Números e rankings do Bravura FC na temporada.",
+  description: "Números e rankings do Bravura Esporte Clube na temporada.",
 };
 
-export default function EstatisticasPage() {
+export const dynamic = "force-dynamic";
+
+export default async function EstatisticasPage() {
+  const { players, teamStats } = await getCmsData();
+  const { topScorers, topAssists, topGames, topGoalParticipations } = getPlayerRankings(players);
+
   return (
     <SiteShell>
       <section className="diag-section py-14">
@@ -40,7 +46,7 @@ export default function EstatisticasPage() {
             label="Média de gols"
             value={(teamStats.goalsFor / Math.max(1, teamStats.games)).toFixed(2)}
           />
-          <StatCard label="Clean sheets" value={5} accent="gold" />
+          <StatCard label="Clean sheets" value={teamStats.cleanSheets} accent="gold" />
         </div>
       </section>
 
@@ -56,7 +62,7 @@ export default function EstatisticasPage() {
       </section>
 
       <section className="container-x py-10 grid lg:grid-cols-2 gap-6">
-        <StatsCharts />
+        <StatsCharts teamStats={teamStats} />
       </section>
     </SiteShell>
   );

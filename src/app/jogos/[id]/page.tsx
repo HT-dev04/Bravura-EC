@@ -3,13 +3,16 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Badge } from "@/components/ui/badge";
-import { matches, getMatchById } from "@/data/matches";
-import { getPlayerById, players } from "@/data/players";
+import { matches as defaultMatches } from "@/data/matches";
+import { getCmsData } from "@/lib/cms-store";
+import { bravuraLogo } from "@/lib/asset-url";
 import { formatDateLong, formatTime } from "@/lib/utils";
 import { Shirt, Calendar, MapPin, Trophy } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
-  return matches.map((m) => ({ id: m.id }));
+  return defaultMatches.map((m) => ({ id: m.id }));
 }
 
 export async function generateMetadata({
@@ -18,7 +21,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const match = getMatchById(id);
+  const { matches } = await getCmsData();
+  const match = matches.find((m) => m.id === id);
   if (!match) return { title: "Partida não encontrada" };
   return {
     title: `Bravura × ${match.opponent}`,
@@ -40,16 +44,17 @@ export default async function MatchDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const match = getMatchById(id);
+  const { matches, players } = await getCmsData();
+  const match = matches.find((m) => m.id === id);
   if (!match) notFound();
 
   const starters = match.lineupStart
-    .map((pid) => getPlayerById(pid))
-    .filter(Boolean) as NonNullable<ReturnType<typeof getPlayerById>>[];
+    .map((pid) => players.find((p) => p.id === pid))
+    .filter(Boolean) as typeof players;
 
   const bench = match.lineupBench
-    .map((pid) => getPlayerById(pid))
-    .filter(Boolean) as NonNullable<ReturnType<typeof getPlayerById>>[];
+    .map((pid) => players.find((p) => p.id === pid))
+    .filter(Boolean) as typeof players;
 
   const highlight = match.highlightPlayerId
     ? players.find((p) => p.id === match.highlightPlayerId)
@@ -68,7 +73,7 @@ export default async function MatchDetailPage({
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10 py-6">
-            <TeamBlock logo="/logo/bravura.svg" name="Bravura FC" />
+            <TeamBlock logo={bravuraLogo} name="Bravura EC" />
             <div className="text-center">
               {match.status === "encerrada" ? (
                 <div className="font-display text-6xl md:text-8xl font-bold">
@@ -193,7 +198,7 @@ export default async function MatchDetailPage({
 function TeamBlock({ logo, name }: { logo: string; name: string }) {
   return (
     <div className="text-center">
-      <Image src={logo} alt={name} width={110} height={110} className="mx-auto" />
+      <Image src={logo} alt={name} width={110} height={110} className="mx-auto h-[110px] w-[110px] object-contain" />
       <p className="font-display text-lg md:text-2xl uppercase mt-2">{name}</p>
     </div>
   );

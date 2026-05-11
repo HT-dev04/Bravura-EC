@@ -1,11 +1,10 @@
 import { StatCard } from "@/components/site/StatCard";
-import { players } from "@/data/players";
-import { matches } from "@/data/matches";
-import { orders } from "@/data/orders";
 import { AdminRevenueChart } from "./AdminRevenueChart";
+import { getCmsData } from "@/lib/cms-store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const { players, matches, orders } = await getCmsData();
   const upcoming = matches.filter((m) => m.status === "agendada");
   const monthOrders = orders;
   const revenue = orders.reduce((sum, o) => sum + o.total, 0);

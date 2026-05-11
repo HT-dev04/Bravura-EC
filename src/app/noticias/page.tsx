@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { NewsCard } from "@/components/site/NewsCard";
 import { Input, Select } from "@/components/ui/input";
@@ -10,16 +10,23 @@ import { Search } from "lucide-react";
 const categories = ["Todas", "Jogos", "Bastidores", "Mercado"] as const;
 
 export default function NoticiasPage() {
+  const [items, setItems] = useState(news);
   const [category, setCategory] = useState<(typeof categories)[number]>("Todas");
   const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    fetch("/api/cms")
+      .then((res) => res.json())
+      .then((data) => data?.news && setItems(data.news));
+  }, []);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return news
+    return items
       .filter((n) => category === "Todas" || n.category === category)
       .filter((n) => !q || n.title.toLowerCase().includes(q) || n.excerpt.toLowerCase().includes(q))
       .sort((a, b) => +new Date(b.publishedAt) - +new Date(a.publishedAt));
-  }, [category, search]);
+  }, [items, category, search]);
 
   const [feature, ...rest] = filtered;
 

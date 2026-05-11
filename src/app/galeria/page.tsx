@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Lightbox } from "@/components/site/Lightbox";
 import { Select } from "@/components/ui/input";
@@ -12,19 +12,26 @@ import { cn } from "@/lib/utils";
 const albums: Array<GalleryAlbum | "Todos"> = ["Todos", "Jogos", "Elenco", "Bastidores", "Treinos", "Artes"];
 
 export default function GaleriaPage() {
+  const [items, setItems] = useState(gallery);
   const [album, setAlbum] = useState<GalleryAlbum | "Todos">("Todos");
   const [season, setSeason] = useState("todas");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  const seasons = Array.from(new Set(gallery.map((g) => g.season)));
+  useEffect(() => {
+    fetch("/api/cms")
+      .then((res) => res.json())
+      .then((data) => data?.gallery && setItems(data.gallery));
+  }, []);
+
+  const seasons = Array.from(new Set(items.map((g) => g.season)));
 
   const filtered = useMemo(() => {
-    return gallery.filter((g) => {
+    return items.filter((g) => {
       const albumOk = album === "Todos" || g.album === album;
       const seasonOk = season === "todas" || g.season === season;
       return albumOk && seasonOk;
     });
-  }, [album, season]);
+  }, [items, album, season]);
 
   return (
     <SiteShell>
@@ -72,7 +79,11 @@ export default function GaleriaPage() {
               onClick={() => setOpenIdx(i)}
               className="relative aspect-square bg-brand-black rounded-sm overflow-hidden group"
             >
-              <Image src={g.src} alt={g.caption} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform" />
+              {g.mediaType === "video" ? (
+                <video src={g.src} className="w-full h-full object-cover" controls />
+              ) : (
+                <Image src={g.src} alt={g.caption} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform" />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-brand-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <p className="absolute bottom-2 left-3 right-3 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                 {g.caption}
@@ -82,7 +93,7 @@ export default function GaleriaPage() {
         </div>
       </section>
 
-      {openIdx !== null && (
+      {openIdx !== null && filtered[openIdx]?.mediaType !== "video" && (
         <Lightbox
           images={filtered.map((g) => ({ src: g.src, caption: g.caption }))}
           index={openIdx}

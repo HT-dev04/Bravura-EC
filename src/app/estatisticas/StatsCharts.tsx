@@ -10,9 +10,9 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { teamStats } from "@/data/stats";
+import type { TeamStatsSummary } from "@/types";
 
-export function StatsCharts() {
+export function StatsCharts({ teamStats }: { teamStats: TeamStatsSummary }) {
   return (
     <>
       <div className="bg-brand-black-2 border border-brand-border rounded-sm p-5 h-[320px]">

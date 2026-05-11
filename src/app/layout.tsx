@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Oswald, Inter } from "next/font/google";
+import { assetUrl, bravuraLogo } from "@/lib/asset-url";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -17,22 +18,22 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Bravura FC — Portal Oficial",
-    template: "%s · Bravura FC",
+    default: "Bravura Esporte Clube — Portal Oficial",
+    template: "%s · Bravura EC",
   },
   description:
-    "Portal oficial do Bravura FC. Acompanhe elenco, jogos, estatísticas, notícias, galeria e adquira produtos oficiais do clube.",
+    "Portal oficial do Bravura Esporte Clube — clube amador de Bugre, MG. Fundado em 2026 com a missão de resgatar talentos e fortalecer o futebol local.",
   openGraph: {
-    title: "Bravura FC — Portal Oficial",
+    title: "Bravura Esporte Clube — Portal Oficial",
     description:
-      "Acompanhe a jornada do Bravura FC: elenco, partidas, estatísticas, galeria e loja oficial.",
+      "Acompanhe a jornada do Bravura Esporte Clube, time mensalista de Bugre-MG: elenco, partidas, estatísticas, galeria e loja oficial.",
     url: "https://bravurafc.example",
-    siteName: "Bravura FC",
+    siteName: "Bravura Esporte Clube",
     locale: "pt_BR",
     type: "website",
-    images: ["/og.jpg"],
+    images: [assetUrl("/og.jpg")],
   },
-  icons: { icon: "/logo/bravura.svg" },
+  icons: { icon: bravuraLogo },
 };
 
 export default function RootLayout({

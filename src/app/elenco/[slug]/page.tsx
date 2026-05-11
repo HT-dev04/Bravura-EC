@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
-import { getPlayerBySlug, players } from "@/data/players";
-import { matches } from "@/data/matches";
+import { players as defaultPlayers } from "@/data/players";
+import { getCmsData } from "@/lib/cms-store";
 import { PlayerGoalsChart } from "./PlayerGoalsChart";
 import { Badge } from "@/components/ui/badge";
 
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
-  return players.map((p) => ({ slug: p.slug }));
+  return defaultPlayers.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -18,7 +20,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const player = getPlayerBySlug(slug);
+  const { players } = await getCmsData();
+  const player = players.find((p) => p.slug === slug);
   if (!player) return { title: "Jogador não encontrado" };
   return { title: `${player.nickname} · ${player.name}`, description: player.bio };
 }
@@ -29,7 +32,8 @@ export default async function PlayerDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const player = getPlayerBySlug(slug);
+  const { players, matches } = await getCmsData();
+  const player = players.find((p) => p.slug === slug);
   if (!player) notFound();
 
   const lastGames = matches

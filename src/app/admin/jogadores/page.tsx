@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
-import { players as initialPlayers } from "@/data/players";
+import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { assetUrl } from "@/lib/asset-url";
+import { slugify } from "@/lib/utils";
 import type { Player, Position } from "@/types";
 
-// TODO: substituir por chamada à API quando o backend for integrado
-
 export default function AdminJogadoresPage() {
-  const [rows, setRows] = useState<Player[]>(initialPlayers);
+  const router = useRouter();
+  const [rows, setRows] = useState<Player[]>([]);
   const [editing, setEditing] = useState<Player | null>(null);
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/cms")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.players && setRows(data.players));
+  }, []);
 
   function handleNew() {
     setEditing({
@@ -28,9 +38,9 @@ export default function AdminJogadoresPage() {
       height: 175,
       weight: 70,
       preferredFoot: "Direito",
-      photo: "/players/placeholder.jpg",
+      photo: assetUrl("/players/placeholder.jpg"),
       bio: "",
-      season: "2025",
+      season: "2026",
       stats: { games: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0, minutes: 0 },
       history: [],
       monthlyGoals: [],
@@ -38,19 +48,54 @@ export default function AdminJogadoresPage() {
     setOpen(true);
   }
 
-  function handleSave(p: Player) {
-    setRows((prev) => {
-      const exists = prev.find((x) => x.id === p.id);
-      if (exists) return prev.map((x) => (x.id === p.id ? p : x));
-      return [...prev, p];
-    });
-    setOpen(false);
-    setEditing(null);
+  async function persist(next: Player[]) {
+    setError(null);
+    const data = await saveAdminCollection("players", next);
+    setRows(data.players);
+    router.refresh();
+    return data.players;
   }
 
-  function handleDelete(p: Player) {
-    if (confirm(`Excluir ${p.name}?`)) {
-      setRows((prev) => prev.filter((x) => x.id !== p.id));
+  async function handleSave(p: Player) {
+    setSaving(true);
+    const player = { ...p, slug: p.slug || slugify(p.nickname || p.name) };
+    const next = (() => {
+      const exists = rows.find((x) => x.id === p.id);
+      if (exists) return rows.map((x) => (x.id === p.id ? player : x));
+      return [...rows, player];
+    })();
+    try {
+      await persist(next);
+      setOpen(false);
+      setEditing(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Falha ao salvar jogador");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(p: Player) {
+    const next = rows.filter((x) => x.id !== p.id);
+    console.info("Excluindo jogador no admin", {
+      deletedId: p.id,
+      beforeIds: rows.map((player) => player.id),
+      afterIds: next.map((player) => player.id),
+    });
+
+    try {
+      const savedPlayers = await persist(next);
+      console.info("Resultado da exclusão de jogador", {
+        deletedId: p.id,
+        savedIds: savedPlayers.map((player) => player.id),
+      });
+    } catch (error) {
+      console.error("Erro ao excluir jogador", {
+        deletedId: p.id,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      setError(error instanceof Error ? error.message : "Falha ao excluir jogador");
     }
   }
 
@@ -62,6 +107,8 @@ export default function AdminJogadoresPage() {
           <Plus className="w-4 h-4" /> Novo
         </Button>
       </div>
+
+      {error && <p className="mb-4 text-sm text-brand-red">{error}</p>}
 
       <DataTable
         columns={[
@@ -78,6 +125,23 @@ export default function AdminJogadoresPage() {
           setOpen(true);
         }}
         onDelete={handleDelete}
+        onBulkDelete={(selected) => {
+          const selectedIds = selected.map((player) => player.id);
+          const next = rows.filter((row) => !selectedIds.includes(row.id));
+          console.info("Excluindo jogadores selecionados no admin", {
+            deletedIds: selectedIds,
+            beforeIds: rows.map((player) => player.id),
+            afterIds: next.map((player) => player.id),
+          });
+          void persist(next).catch((error) => {
+            console.error("Erro ao excluir jogadores selecionados", {
+              deletedIds: selectedIds,
+              message: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            });
+            setError(error instanceof Error ? error.message : "Falha ao excluir jogadores");
+          });
+        }}
       />
 
       {editing && (
@@ -158,11 +222,11 @@ export default function AdminJogadoresPage() {
               <Input
                 type="file"
                 className="mt-1"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const url = URL.createObjectURL(file);
-                    setEditing({ ...editing, photo: url });
+                    const upload = await uploadAdminFile(file);
+                    setEditing({ ...editing, photo: upload.url });
                   }
                 }}
               />
@@ -178,7 +242,7 @@ export default function AdminJogadoresPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary">Salvar</Button>
+              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>

@@ -1,21 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { news as initial } from "@/data/news";
 import type { NewsItem } from "@/types";
+import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { assetUrl } from "@/lib/asset-url";
 import { formatDate, slugify } from "@/lib/utils";
 
-// TODO: substituir por chamada à API quando o backend for integrado
-
 export default function AdminNoticiasPage() {
-  const [rows, setRows] = useState<NewsItem[]>(initial);
+  const [rows, setRows] = useState<NewsItem[]>([]);
   const [editing, setEditing] = useState<NewsItem | null>(null);
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/cms")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.news && setRows(data.news));
+  }, []);
 
   function handleNew() {
     setEditing({
@@ -26,21 +33,34 @@ export default function AdminNoticiasPage() {
       category: "Jogos",
       author: "Redação Bravura",
       publishedAt: new Date().toISOString(),
-      cover: "/gallery/artes-01.jpg",
+      cover: assetUrl("/gallery/artes-01.jpg"),
       content: "",
     });
     setOpen(true);
   }
 
-  function handleSave(n: NewsItem) {
-    n.slug = n.slug || slugify(n.title);
-    setRows((prev) => {
-      const exists = prev.find((x) => x.id === n.id);
-      if (exists) return prev.map((x) => (x.id === n.id ? n : x));
-      return [...prev, n];
-    });
-    setOpen(false);
-    setEditing(null);
+  async function persist(next: NewsItem[]) {
+    setMessage(null);
+    const data = await saveAdminCollection("news", next);
+    setRows(data.news);
+    return data.news;
+  }
+
+  async function handleSave(n: NewsItem) {
+    setSaving(true);
+    const item = { ...n, slug: n.slug || slugify(n.title) };
+    const exists = rows.find((x) => x.id === n.id);
+    const next = exists ? rows.map((x) => (x.id === n.id ? item : x)) : [...rows, item];
+    try {
+      await persist(next);
+      setOpen(false);
+      setEditing(null);
+    } catch (error) {
+      console.error("Erro ao salvar notícia", error);
+      setMessage(error instanceof Error ? error.message : "Falha ao salvar notícia");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -51,6 +71,8 @@ export default function AdminNoticiasPage() {
           <Plus className="w-4 h-4" /> Nova
         </Button>
       </div>
+
+      {message && <p className="mb-4 text-sm text-brand-red">{message}</p>}
 
       <DataTable
         columns={[
@@ -65,7 +87,16 @@ export default function AdminNoticiasPage() {
           setOpen(true);
         }}
         onDelete={(r) => {
-          if (confirm("Excluir notícia?")) setRows((prev) => prev.filter((x) => x.id !== r.id));
+          void persist(rows.filter((x) => x.id !== r.id)).catch((error) => {
+            console.error("Erro ao excluir notícia", error);
+            setMessage(error instanceof Error ? error.message : "Falha ao excluir notícia");
+          });
+        }}
+        onBulkDelete={(selected) => {
+          void persist(rows.filter((row) => !selected.some((item) => item.id === row.id))).catch((error) => {
+            console.error("Erro ao excluir notícias", error);
+            setMessage(error instanceof Error ? error.message : "Falha ao excluir notícias");
+          });
         }}
       />
 
@@ -81,7 +112,7 @@ export default function AdminNoticiasPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleSave(editing);
+              void handleSave(editing);
             }}
             className="space-y-4"
           >
@@ -123,9 +154,12 @@ export default function AdminNoticiasPage() {
               <Input
                 type="file"
                 className="mt-1"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) setEditing({ ...editing, cover: URL.createObjectURL(f) });
+                  if (f) {
+                    const upload = await uploadAdminFile(f);
+                    setEditing({ ...editing, cover: upload.url });
+                  }
                 }}
               />
             </div>
@@ -158,7 +192,7 @@ export default function AdminNoticiasPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary">Salvar</Button>
+              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>

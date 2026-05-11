@@ -1,32 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
-import { matches as initialMatches } from "@/data/matches";
+import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { assetUrl } from "@/lib/asset-url";
 import type { Match, MatchEvent } from "@/types";
 import { formatDate } from "@/lib/utils";
 
-// TODO: substituir por chamada à API quando o backend for integrado
-
 export default function AdminPartidasPage() {
-  const [rows, setRows] = useState<Match[]>(initialMatches);
+  const [rows, setRows] = useState<Match[]>([]);
   const [editing, setEditing] = useState<Match | null>(null);
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/cms")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.matches && setRows(data.matches));
+  }, []);
 
   function handleNew() {
     setEditing({
       id: `m${Date.now()}`,
       opponent: "",
-      opponentLogo: "/sponsors/adv-generico.svg",
+      opponentLogo: assetUrl("/sponsors/adv-generico.svg"),
       date: new Date().toISOString(),
       location: "",
       homeAway: "casa",
       competition: "Copa Amadora",
-      season: "2025",
+      season: "2026",
       status: "agendada",
       scoreHome: null,
       scoreAway: null,
@@ -39,14 +46,27 @@ export default function AdminPartidasPage() {
     setOpen(true);
   }
 
-  function handleSave(m: Match) {
-    setRows((prev) => {
-      const exists = prev.find((x) => x.id === m.id);
-      if (exists) return prev.map((x) => (x.id === m.id ? m : x));
-      return [...prev, m];
-    });
-    setOpen(false);
-    setEditing(null);
+  async function persist(next: Match[]) {
+    setMessage(null);
+    const data = await saveAdminCollection("matches", next);
+    setRows(data.matches);
+    return data.matches;
+  }
+
+  async function handleSave(m: Match) {
+    setSaving(true);
+    const exists = rows.find((x) => x.id === m.id);
+    const next = exists ? rows.map((x) => (x.id === m.id ? m : x)) : [...rows, m];
+    try {
+      await persist(next);
+      setOpen(false);
+      setEditing(null);
+    } catch (error) {
+      console.error("Erro ao salvar partida", error);
+      setMessage(error instanceof Error ? error.message : "Falha ao salvar partida");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function addEvent() {
@@ -83,6 +103,8 @@ export default function AdminPartidasPage() {
         </Button>
       </div>
 
+      {message && <p className="mb-4 text-sm text-brand-red">{message}</p>}
+
       <DataTable
         columns={[
           { key: "date", label: "Data", render: (r) => formatDate(r.date) },
@@ -103,7 +125,16 @@ export default function AdminPartidasPage() {
           setOpen(true);
         }}
         onDelete={(r) => {
-          if (confirm("Excluir partida?")) setRows((prev) => prev.filter((x) => x.id !== r.id));
+          void persist(rows.filter((x) => x.id !== r.id)).catch((error) => {
+            console.error("Erro ao excluir partida", error);
+            setMessage(error instanceof Error ? error.message : "Falha ao excluir partida");
+          });
+        }}
+        onBulkDelete={(selected) => {
+          void persist(rows.filter((row) => !selected.some((item) => item.id === row.id))).catch((error) => {
+            console.error("Erro ao excluir partidas", error);
+            setMessage(error instanceof Error ? error.message : "Falha ao excluir partidas");
+          });
         }}
       />
 
@@ -132,6 +163,21 @@ export default function AdminPartidasPage() {
                   className="mt-1"
                   value={editing.opponent}
                   onChange={(e) => setEditing({ ...editing, opponent: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label>Escudo do adversário</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  className="mt-1"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const upload = await uploadAdminFile(file);
+                      setEditing({ ...editing, opponentLogo: upload.url });
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -187,6 +233,24 @@ export default function AdminPartidasPage() {
                   <option value="agendada">Agendada</option>
                   <option value="em_andamento">Em andamento</option>
                   <option value="encerrada">Encerrada</option>
+                </Select>
+              </div>
+              <div>
+                <Label>Resultado</Label>
+                <Select
+                  className="mt-1"
+                  value={editing.result ?? ""}
+                  onChange={(e) =>
+                    setEditing({
+                      ...editing,
+                      result: e.target.value === "" ? null : (e.target.value as Match["result"]),
+                    })
+                  }
+                >
+                  <option value="">Sem resultado</option>
+                  <option value="V">Vitória</option>
+                  <option value="E">Empate</option>
+                  <option value="D">Derrota</option>
                 </Select>
               </div>
               <div>
@@ -283,7 +347,7 @@ export default function AdminPartidasPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary">Salvar</Button>
+              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>

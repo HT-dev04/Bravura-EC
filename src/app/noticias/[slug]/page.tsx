@@ -5,11 +5,14 @@ import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { NewsCard } from "@/components/site/NewsCard";
 import { Badge } from "@/components/ui/badge";
-import { news, getNewsBySlug } from "@/data/news";
+import { news as defaultNews } from "@/data/news";
+import { getCmsData } from "@/lib/cms-store";
 import { formatDateLong } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
-  return news.map((n) => ({ slug: n.slug }));
+  return defaultNews.map((n) => ({ slug: n.slug }));
 }
 
 export async function generateMetadata({
@@ -18,7 +21,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const item = getNewsBySlug(slug);
+  const { news } = await getCmsData();
+  const item = news.find((n) => n.slug === slug);
   if (!item) return { title: "Notícia não encontrada" };
   return {
     title: item.title,
@@ -33,7 +37,8 @@ export default async function NewsDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const item = getNewsBySlug(slug);
+  const { news } = await getCmsData();
+  const item = news.find((n) => n.slug === slug);
   if (!item) notFound();
 
   const related = news.filter((n) => n.id !== item.id).slice(0, 3);

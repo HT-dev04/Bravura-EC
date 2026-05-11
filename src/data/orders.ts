@@ -1,6 +1,7 @@
+import { assetUrl } from "@/lib/asset-url";
 import type { Order } from "@/types";
 
-export const orders: Order[] = [
+const orderRows: Order[] = [
   {
     id: "BRV-1001",
     createdAt: "2025-03-22T14:32:00-03:00",
@@ -95,3 +96,8 @@ export const orders: Order[] = [
     status: "entregue",
   },
 ];
+
+export const orders: Order[] = orderRows.map((order) => ({
+  ...order,
+  items: order.items.map((item) => ({ ...item, image: assetUrl(item.image) })),
+}));

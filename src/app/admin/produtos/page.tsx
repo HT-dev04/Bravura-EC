@@ -1,21 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { products as initial } from "@/data/products";
+import { saveAdminCollection } from "@/lib/admin-client";
+import { assetUrl } from "@/lib/asset-url";
 import type { Product, ProductCategory } from "@/types";
 import { formatCurrency, slugify } from "@/lib/utils";
 
-// TODO: substituir por chamada à API quando o backend for integrado
-
 export default function AdminProdutosPage() {
-  const [rows, setRows] = useState<Product[]>(initial);
+  const [rows, setRows] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/cms")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.products && setRows(data.products));
+  }, []);
+
+  async function persist(next: Product[]) {
+    const data = await saveAdminCollection("products", next);
+    setRows(data.products);
+  }
 
   function handleNew() {
     setEditing({
@@ -24,7 +34,7 @@ export default function AdminProdutosPage() {
       name: "",
       category: "uniformes-jogo",
       price: 0,
-      images: ["/products/placeholder.jpg"],
+      images: [assetUrl("/products/placeholder.jpg")],
       description: "",
       sizes: ["P", "M", "G", "GG"],
       stock: 0,
@@ -35,13 +45,11 @@ export default function AdminProdutosPage() {
     setOpen(true);
   }
 
-  function handleSave(p: Product) {
-    p.slug = p.slug || slugify(p.name);
-    setRows((prev) => {
-      const exists = prev.find((x) => x.id === p.id);
-      if (exists) return prev.map((x) => (x.id === p.id ? p : x));
-      return [...prev, p];
-    });
+  async function handleSave(p: Product) {
+    const product = { ...p, slug: p.slug || slugify(p.name) };
+    const exists = rows.find((x) => x.id === p.id);
+    const next = exists ? rows.map((x) => (x.id === p.id ? product : x)) : [...rows, product];
+    await persist(next);
     setOpen(false);
     setEditing(null);
   }
@@ -68,7 +76,10 @@ export default function AdminProdutosPage() {
           setOpen(true);
         }}
         onDelete={(r) => {
-          if (confirm("Excluir?")) setRows((prev) => prev.filter((x) => x.id !== r.id));
+          void persist(rows.filter((x) => x.id !== r.id));
+        }}
+        onBulkDelete={(selected) => {
+          void persist(rows.filter((row) => !selected.some((item) => item.id === row.id)));
         }}
       />
 
@@ -84,7 +95,7 @@ export default function AdminProdutosPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleSave(editing);
+              void handleSave(editing);
             }}
             className="space-y-4"
           >

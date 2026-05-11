@@ -1,6 +1,7 @@
+import { assetUrl } from "@/lib/asset-url";
 import type { Player } from "@/types";
 
-export const players: Player[] = [
+const playerRows: Player[] = [
   {
     id: "p1",
     slug: "mateus-fera",
@@ -14,10 +15,10 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/mateus-fera.jpg",
     bio: "Goleiro titular desde 2022, referência de liderança no elenco. Conhecido pelos reflexos e pela marcação de pênaltis.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 0, assists: 1, yellowCards: 1, redCards: 0, minutes: 1080 },
     history: [
-      { year: 2022, club: "Bravura FC" },
+      { year: 2022, club: "Bravura Esporte Clube" },
       { year: 2020, club: "Unidos da Vila" },
     ],
     monthlyGoals: [
@@ -38,9 +39,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/lucas-muralha.jpg",
     bio: "Zagueiro experiente, pilar da defesa. Bom jogo aéreo e saída de bola precisa.",
-    season: "2025",
+    season: "2026",
     stats: { games: 11, goals: 1, assists: 0, yellowCards: 3, redCards: 0, minutes: 990 },
-    history: [{ year: 2021, club: "Bravura FC" }],
+    history: [{ year: 2021, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 1 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -59,9 +60,9 @@ export const players: Player[] = [
     preferredFoot: "Esquerdo",
     photo: "/players/rodrigo-tank.jpg",
     bio: "Zagueiro raçudo, capitão do Bravura. Jogador de enorme entrega.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 2, assists: 1, yellowCards: 4, redCards: 1, minutes: 1070 },
-    history: [{ year: 2020, club: "Bravura FC" }],
+    history: [{ year: 2020, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -80,9 +81,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/diego-raposa.jpg",
     bio: "Lateral-direito com boa arrancada e participação ofensiva.",
-    season: "2025",
+    season: "2026",
     stats: { games: 10, goals: 0, assists: 3, yellowCards: 2, redCards: 0, minutes: 880 },
-    history: [{ year: 2023, club: "Bravura FC" }],
+    history: [{ year: 2023, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -101,9 +102,9 @@ export const players: Player[] = [
     preferredFoot: "Esquerdo",
     photo: "/players/henrique-flecha.jpg",
     bio: "Lateral-esquerdo rápido, destaque nas subidas ao ataque.",
-    season: "2025",
+    season: "2026",
     stats: { games: 11, goals: 1, assists: 4, yellowCards: 1, redCards: 0, minutes: 960 },
-    history: [{ year: 2022, club: "Bravura FC" }],
+    history: [{ year: 2022, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -122,9 +123,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/caio-general.jpg",
     bio: "Volante organizador, cérebro do meio-campo bravurense.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 2, assists: 5, yellowCards: 2, redCards: 0, minutes: 1050 },
-    history: [{ year: 2021, club: "Bravura FC" }],
+    history: [{ year: 2021, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 1 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 1 }, { month: "Jun", goals: 0 },
@@ -143,9 +144,9 @@ export const players: Player[] = [
     preferredFoot: "Esquerdo",
     photo: "/players/bruno-mago.jpg",
     bio: "Meia de criação, especialista em jogadas de bola parada.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 4, assists: 7, yellowCards: 1, redCards: 0, minutes: 1080 },
-    history: [{ year: 2020, club: "Bravura FC" }],
+    history: [{ year: 2020, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 1 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 1 }, { month: "Jun", goals: 0 },
@@ -164,9 +165,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/pedro-motor.jpg",
     bio: "Camisa 10 incansável, chega bem à área e é letal nos contra-ataques.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 5, assists: 6, yellowCards: 2, redCards: 0, minutes: 1080 },
-    history: [{ year: 2022, club: "Bravura FC" }],
+    history: [{ year: 2022, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 1 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 1 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 1 }, { month: "Jun", goals: 1 },
@@ -185,9 +186,9 @@ export const players: Player[] = [
     preferredFoot: "Esquerdo",
     photo: "/players/thiago-pirata.jpg",
     bio: "Ponta-esquerda velocista, driblador nato. Um dos goleadores do time.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 9, assists: 4, yellowCards: 2, redCards: 0, minutes: 1060 },
-    history: [{ year: 2021, club: "Bravura FC" }],
+    history: [{ year: 2021, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 2 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 2 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 2 }, { month: "Jun", goals: 1 },
@@ -206,9 +207,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/felipe-artilheiro.jpg",
     bio: "Centroavante referência, faro de gol e jogo aéreo. Maior artilheiro do clube na temporada.",
-    season: "2025",
+    season: "2026",
     stats: { games: 12, goals: 12, assists: 3, yellowCards: 1, redCards: 0, minutes: 1080 },
-    history: [{ year: 2019, club: "Bravura FC" }],
+    history: [{ year: 2019, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 2 }, { month: "Fev", goals: 2 }, { month: "Mar", goals: 3 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 2 }, { month: "Jun", goals: 2 },
@@ -227,9 +228,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/gabriel-raio.jpg",
     bio: "Ponta-direita veloz, entra muito bem vindo do banco.",
-    season: "2025",
+    season: "2026",
     stats: { games: 11, goals: 6, assists: 2, yellowCards: 0, redCards: 0, minutes: 720 },
-    history: [{ year: 2023, club: "Bravura FC" }],
+    history: [{ year: 2023, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 1 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 1 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 1 }, { month: "Jun", goals: 1 },
@@ -248,9 +249,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/enzo-torre.jpg",
     bio: "Zagueiro reserva, vem ganhando espaço pelo domínio aéreo.",
-    season: "2025",
+    season: "2026",
     stats: { games: 6, goals: 1, assists: 0, yellowCards: 1, redCards: 0, minutes: 420 },
-    history: [{ year: 2024, club: "Bravura FC" }],
+    history: [{ year: 2024, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 1 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -269,9 +270,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/igor-sombra.jpg",
     bio: "Meia de marcação, especialista em quebrar linhas de passe adversárias.",
-    season: "2025",
+    season: "2026",
     stats: { games: 10, goals: 1, assists: 2, yellowCards: 3, redCards: 0, minutes: 780 },
-    history: [{ year: 2022, club: "Bravura FC" }],
+    history: [{ year: 2022, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -290,9 +291,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/leo-polvo.jpg",
     bio: "Goleiro reserva, costuma brilhar em séries de pênaltis.",
-    season: "2025",
+    season: "2026",
     stats: { games: 3, goals: 0, assists: 0, yellowCards: 0, redCards: 0, minutes: 270 },
-    history: [{ year: 2024, club: "Bravura FC" }],
+    history: [{ year: 2024, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -311,9 +312,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/marcos-trator.jpg",
     bio: "Volante forte na marcação, chega com perigo na área adversária.",
-    season: "2025",
+    season: "2026",
     stats: { games: 11, goals: 2, assists: 1, yellowCards: 4, redCards: 0, minutes: 900 },
-    history: [{ year: 2021, club: "Bravura FC" }],
+    history: [{ year: 2021, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 1 },
@@ -332,9 +333,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/alex-bomba.jpg",
     bio: "Jovem atacante cria do clube, prata da casa em ascensão.",
-    season: "2025",
+    season: "2026",
     stats: { games: 9, goals: 4, assists: 2, yellowCards: 1, redCards: 0, minutes: 680 },
-    history: [{ year: 2024, club: "Bravura FC" }],
+    history: [{ year: 2024, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 1 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 1 }, { month: "Jun", goals: 1 },
@@ -353,9 +354,9 @@ export const players: Player[] = [
     preferredFoot: "Direito",
     photo: "/players/vitor-parede.jpg",
     bio: "Zagueiro reserva, sólido na marcação individual.",
-    season: "2025",
+    season: "2026",
     stats: { games: 7, goals: 0, assists: 0, yellowCards: 2, redCards: 0, minutes: 560 },
-    history: [{ year: 2023, club: "Bravura FC" }],
+    history: [{ year: 2023, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 0 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 0 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 0 },
@@ -374,15 +375,17 @@ export const players: Player[] = [
     preferredFoot: "Esquerdo",
     photo: "/players/samuel-tempestade.jpg",
     bio: "Meia ofensivo driblador, faz do um contra um sua marca registrada.",
-    season: "2025",
+    season: "2026",
     stats: { games: 10, goals: 3, assists: 5, yellowCards: 1, redCards: 0, minutes: 820 },
-    history: [{ year: 2023, club: "Bravura FC" }],
+    history: [{ year: 2023, club: "Bravura Esporte Clube" }],
     monthlyGoals: [
       { month: "Jan", goals: 0 }, { month: "Fev", goals: 1 }, { month: "Mar", goals: 0 },
       { month: "Abr", goals: 1 }, { month: "Mai", goals: 0 }, { month: "Jun", goals: 1 },
     ],
   },
 ];
+
+export const players: Player[] = playerRows.map((player) => ({ ...player, photo: assetUrl(player.photo) }));
 
 export function getPlayerBySlug(slug: string) {
   return players.find((p) => p.slug === slug);

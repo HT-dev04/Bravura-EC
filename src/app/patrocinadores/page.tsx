@@ -8,7 +8,7 @@ import { Check, Megaphone, Users, TrendingUp } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Patrocinadores",
-  description: "Conheça os parceiros do Bravura FC e saiba como patrocinar o clube.",
+  description: "Conheça os parceiros do Bravura Esporte Clube e saiba como patrocinar o clube.",
 };
 
 const plans = [

@@ -78,6 +78,7 @@ export type GalleryAlbum = "Jogos" | "Elenco" | "Bastidores" | "Treinos" | "Arte
 export interface GalleryPhoto {
   id: string;
   src: string;
+  mediaType?: "image" | "video";
   album: GalleryAlbum;
   season: string;
   caption: string;
@@ -142,6 +143,46 @@ export interface Order {
   status: "pendente" | "pago" | "enviado" | "entregue";
 }
 
+export type MonthlyPaymentStatus = "pendente" | "pago" | "isento";
+
+export interface MonthlyPayment {
+  playerId: string;
+  month: string;
+  status: MonthlyPaymentStatus;
+  paidAt?: string;
+}
+
+export interface RevenueEntry {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+}
+
+export interface ExpenseEntry {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+}
+
+export interface SponsorshipEntry {
+  id: string;
+  date: string;
+  name: string;
+  photo: string;
+  purpose: string;
+  value: number;
+}
+
+export interface FinanceData {
+  monthlyFeeAmount: number;
+  monthlyPayments: MonthlyPayment[];
+  revenues: RevenueEntry[];
+  expenses: ExpenseEntry[];
+  sponsorships: SponsorshipEntry[];
+}
+
 export interface ClubInfo {
   name: string;
   founded: number;
@@ -150,7 +191,7 @@ export interface ClubInfo {
   mission: string;
   vision: string;
   values: string[];
-  timeline: { year: number; title: string; description: string }[];
+  timeline: { id: string; year: number; title: string; description: string }[];
   mascot: string;
 }
 
@@ -162,6 +203,19 @@ export interface TeamStatsSummary {
   goalsFor: number;
   goalsAgainst: number;
   winRate: number;
+  cleanSheets: number;
   goalsByMonth: { month: string; goals: number }[];
   winRateByCompetition: { competition: string; rate: number }[];
+}
+
+export interface CmsData {
+  players: Player[];
+  matches: Match[];
+  news: NewsItem[];
+  gallery: GalleryPhoto[];
+  products: Product[];
+  sponsors: Sponsor[];
+  orders: Order[];
+  teamStats: TeamStatsSummary;
+  finance: FinanceData;
 }

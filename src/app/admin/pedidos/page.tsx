@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable } from "@/components/admin/DataTable";
 import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { orders as initial } from "@/data/orders";
+import { saveAdminCollection } from "@/lib/admin-client";
 import type { Order } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
-
-// TODO: substituir por chamada à API quando o backend for integrado
 
 const statusVariant: Record<Order["status"], "gray" | "gold" | "green" | "red"> = {
   pendente: "gray",
@@ -21,15 +20,48 @@ const statusVariant: Record<Order["status"], "gray" | "gold" | "green" | "red"> 
 export default function AdminPedidosPage() {
   const [rows, setRows] = useState<Order[]>(initial);
   const [viewing, setViewing] = useState<Order | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/cms")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const orders = data?.data?.orders || data?.orders;
+        if (orders) setRows(orders);
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar pedidos", error);
+        setMessage("Não foi possível carregar os pedidos salvos.");
+      });
+  }, []);
+
+  async function persist(next: Order[]) {
+    const previous = rows;
+    setRows(next);
+
+    try {
+      const data = await saveAdminCollection("orders", next);
+      setRows(data.orders);
+      setMessage("Pedidos salvos com sucesso.");
+      return true;
+    } catch (error) {
+      setRows(previous);
+      setMessage("Não foi possível salvar os pedidos. Tente novamente.");
+      console.error("Erro ao persistir pedidos", error);
+      return false;
+    }
+  }
 
   function updateStatus(id: string, status: Order["status"]) {
-    setRows((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    const next = rows.map((o) => (o.id === id ? { ...o, status } : o));
+    void persist(next);
     if (viewing?.id === id) setViewing({ ...viewing, status });
   }
 
   return (
     <div className="p-6 md:p-10">
       <h1 className="font-display text-3xl md:text-4xl uppercase mb-6">Pedidos</h1>
+      {message && <p className="mb-4 text-sm text-brand-gray">{message}</p>}
 
       <DataTable
         columns={[
@@ -45,6 +77,12 @@ export default function AdminPedidosPage() {
         ]}
         rows={rows}
         onEdit={(r) => setViewing(r)}
+        onDelete={(r) => {
+          void persist(rows.filter((row) => row.id !== r.id));
+        }}
+        onBulkDelete={(selected) => {
+          void persist(rows.filter((row) => !selected.some((item) => item.id === row.id)));
+        }}
       />
 
       {viewing && (

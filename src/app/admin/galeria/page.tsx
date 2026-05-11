@@ -1,44 +1,100 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
-import { gallery as initial } from "@/data/gallery";
+import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { assetUrl } from "@/lib/asset-url";
 import type { GalleryPhoto, GalleryAlbum } from "@/types";
 
-// TODO: substituir por chamada à API quando o backend for integrado
+function makeUniqueGalleryRows(items: GalleryPhoto[]) {
+  const seen = new Set<string>();
+  return items.map((item) => {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      return item;
+    }
+
+    const unique = { ...item, id: `${item.id}-${Date.now()}-${seen.size}` };
+    seen.add(unique.id);
+    return unique;
+  });
+}
 
 export default function AdminGaleriaPage() {
-  const [rows, setRows] = useState<GalleryPhoto[]>(initial);
+  const [rows, setRows] = useState<GalleryPhoto[]>([]);
   const [editing, setEditing] = useState<GalleryPhoto | null>(null);
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/cms")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const gallery = data?.data?.gallery || data?.gallery;
+        if (gallery) setRows(makeUniqueGalleryRows(gallery));
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar galeria", error);
+        setMessage("Não foi possível carregar os dados salvos da galeria.");
+      });
+  }, []);
 
   function handleNew() {
     setEditing({
       id: `g${Date.now()}`,
-      src: "/gallery/placeholder.jpg",
+      src: assetUrl("/gallery/placeholder.jpg"),
+      mediaType: "image",
       album: "Jogos",
-      season: "2025",
+      season: "2026",
       caption: "",
     });
     setOpen(true);
   }
 
-  function handleSave(g: GalleryPhoto) {
-    setRows((prev) => {
-      const exists = prev.find((x) => x.id === g.id);
-      if (exists) return prev.map((x) => (x.id === g.id ? g : x));
-      return [...prev, g];
-    });
-    setOpen(false);
-    setEditing(null);
+  async function persist(next: GalleryPhoto[]) {
+    const previous = rows;
+    const safeNext = makeUniqueGalleryRows(next).filter((item) => item.id && item.src && item.album && item.season);
+
+    try {
+      const data = await saveAdminCollection("gallery", safeNext);
+      setRows(makeUniqueGalleryRows(data.gallery));
+      setMessage("Galeria salva com sucesso.");
+      return true;
+    } catch (error) {
+      setRows(previous);
+      setMessage("Não foi possível salvar a galeria. Tente novamente.");
+      console.error("Erro ao persistir galeria", error);
+      return false;
+    }
   }
 
-  function handleDelete(id: string) {
-    if (confirm("Excluir foto?")) setRows((prev) => prev.filter((x) => x.id !== id));
+  async function handleSave(g: GalleryPhoto) {
+    setSaving(true);
+    try {
+      const exists = rows.find((x) => x.id === g.id);
+      const next = exists ? rows.map((x) => (x.id === g.id ? g : x)) : [...rows, g];
+      if (await persist(next)) {
+        setOpen(false);
+        setEditing(null);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const next = rows.filter((x) => x.id !== id);
+    if (next.length === rows.length) {
+      setMessage("Mídia não encontrada para exclusão.");
+      return;
+    }
+
+    await persist(next);
   }
 
   return (
@@ -46,9 +102,11 @@ export default function AdminGaleriaPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-3xl md:text-4xl uppercase">Galeria</h1>
         <Button variant="primary" onClick={handleNew}>
-          <Plus className="w-4 h-4" /> Nova foto
+          <Plus className="w-4 h-4" /> Nova mídia
         </Button>
       </div>
+
+      {message && <p className="mb-4 text-sm text-brand-gray">{message}</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {rows.map((g) => (
@@ -57,7 +115,11 @@ export default function AdminGaleriaPage() {
             className="relative group bg-brand-black-2 border border-brand-border rounded-sm overflow-hidden"
           >
             <div className="relative aspect-square">
-              <Image src={g.src} alt={g.caption} fill sizes="300px" className="object-cover" />
+              {g.mediaType === "video" ? (
+                <video src={g.src} className="w-full h-full object-cover" muted />
+              ) : (
+                <Image src={g.src} alt={g.caption} fill sizes="300px" className="object-cover" />
+              )}
             </div>
             <div className="p-2 text-xs">
               <p className="truncate">{g.caption}</p>
@@ -101,13 +163,17 @@ export default function AdminGaleriaPage() {
             className="space-y-4"
           >
             <div>
-              <Label>Arquivo</Label>
+              <Label>Arquivo de foto ou vídeo</Label>
               <Input
                 type="file"
+                accept="image/*,video/*"
                 className="mt-1"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) setEditing({ ...editing, src: URL.createObjectURL(f) });
+                  if (f) {
+                    const upload = await uploadAdminFile(f);
+                    setEditing({ ...editing, src: upload.url, mediaType: upload.type });
+                  }
                 }}
               />
             </div>
@@ -154,7 +220,7 @@ export default function AdminGaleriaPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary">Salvar</Button>
+              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>

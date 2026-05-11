@@ -8,18 +8,26 @@ import { NewsCard } from "@/components/site/NewsCard";
 import { SponsorGrid } from "@/components/site/SponsorGrid";
 import { Button } from "@/components/ui/button";
 import { clubInfo } from "@/data/club";
-import { getNextMatch, getLastFinishedMatch } from "@/data/matches";
-import { news } from "@/data/news";
 import { sponsors } from "@/data/sponsors";
-import { teamStats, topScorers } from "@/data/stats";
-import { gallery } from "@/data/gallery";
+import { getCmsData } from "@/lib/cms-store";
+import { bravuraLogo } from "@/lib/asset-url";
+import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
 import { formatDateLong, formatTime } from "@/lib/utils";
 
-export default function HomePage() {
-  const next = getNextMatch();
-  const last = getLastFinishedMatch();
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const { matches, news, gallery, players } = await getCmsData();
+  const next = matches
+    .filter((m) => m.status === "agendada")
+    .sort((a, b) => +new Date(a.date) - +new Date(b.date))[0];
+  const last = matches
+    .filter((m) => m.status === "encerrada")
+    .sort((a, b) => +new Date(b.date) - +new Date(a.date))[0];
   const latestNews = news.slice(0, 3);
   const homeGallery = gallery.slice(0, 6);
+  const teamStats = getTeamStats(matches);
+  const { topScorers } = getPlayerRankings(players);
 
   return (
     <SiteShell>
@@ -27,16 +35,16 @@ export default function HomePage() {
         <div className="container-x py-16 md:py-24 grid lg:grid-cols-[1fr_auto] items-center gap-10">
           <div className="relative z-10">
             <p className="text-brand-gold uppercase tracking-[0.3em] text-xs mb-4 font-semibold">
-              Portal Oficial · Temporada 2025
+              Portal Oficial · Temporada 2026
             </p>
             <h1 className="font-display text-5xl md:text-7xl lg:text-8xl uppercase leading-none mb-6">
-              Bravura <span className="text-brand-red">FC</span>
+              Bravura <span className="text-brand-red">EC</span>
             </h1>
             <p className="text-lg md:text-xl text-brand-white/80 max-w-xl mb-2 italic">
               &ldquo;{clubInfo.motto}&rdquo;
             </p>
             <p className="text-sm text-brand-gray max-w-xl mb-8">
-              Fundado em {clubInfo.founded}. Tradição, raça e compromisso com a comunidade.
+              Fundado em {clubInfo.founded} · Bugre, MG. Paixão pelo futebol, compromisso com a comunidade.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/jogos">
@@ -53,11 +61,11 @@ export default function HomePage() {
           </div>
           <div className="relative hidden lg:block">
             <Image
-              src="/logo/bravura.svg"
-              alt="Escudo Bravura FC"
+              src={bravuraLogo}
+              alt="Escudo Bravura Esporte Clube"
               width={360}
               height={360}
-              className="w-80 h-80 drop-shadow-[0_0_60px_rgba(200,16,46,0.4)]"
+              className="h-80 w-80 object-contain drop-shadow-[0_0_60px_rgba(200,16,46,0.4)]"
               priority
             />
           </div>
@@ -74,7 +82,13 @@ export default function HomePage() {
             {next ? (
               <div>
                 <div className="flex items-center justify-between gap-4 mb-4">
-                  <Image src="/logo/bravura.svg" alt="Bravura" width={60} height={60} />
+                  <Image
+                    src={bravuraLogo}
+                    alt="Bravura Futebol Clube"
+                    width={60}
+                    height={60}
+                    className="h-[60px] w-[60px] object-contain"
+                  />
                   <div className="text-center">
                     <p className="font-display text-2xl uppercase">VS</p>
                     <p className="text-brand-gold text-xs">{next.competition}</p>
@@ -121,11 +135,11 @@ export default function HomePage() {
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div className="text-center flex-1">
                     <Image
-                      src="/logo/bravura.svg"
-                      alt="Bravura"
+                      src={bravuraLogo}
+                      alt="Bravura Futebol Clube"
                       width={60}
                       height={60}
-                      className="mx-auto"
+                      className="mx-auto h-[60px] w-[60px] object-contain"
                     />
                     <p className="text-xs mt-1 text-brand-gray uppercase">Bravura</p>
                   </div>
@@ -213,13 +227,17 @@ export default function HomePage() {
                 href="/galeria"
                 className="relative aspect-square bg-brand-black rounded-sm overflow-hidden group"
               >
-                <Image
-                  src={g.src}
-                  alt={g.caption}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+                {g.mediaType === "video" ? (
+                  <video src={g.src} className="w-full h-full object-cover" muted playsInline />
+                ) : (
+                  <Image
+                    src={g.src}
+                    alt={g.caption}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-brand-black/70 to-transparent" />
                 <p className="absolute bottom-2 left-3 text-xs font-semibold">{g.caption}</p>
               </Link>

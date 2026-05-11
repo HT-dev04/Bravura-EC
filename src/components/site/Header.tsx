@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { Menu, X, ShoppingBag, Camera } from "lucide-react";
+import { useState } from "react";
+import { Menu, X, ShoppingBag, Camera, Shield } from "lucide-react";
 import { useCart } from "@/lib/cart-store";
+import { bravuraLogo } from "@/lib/asset-url";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -22,25 +23,22 @@ const navLinks = [
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const count = useCart((s) => s.count());
   const openCart = useCart((s) => s.open);
-
-  useEffect(() => setMounted(true), []);
 
   return (
     <header className="sticky top-0 z-50 bg-brand-black/95 backdrop-blur border-b border-brand-border">
       <div className="container-x flex items-center justify-between h-16">
         <Link href="/" className="flex items-center gap-3">
           <Image
-            src="/logo/bravura.svg"
-            alt="Bravura FC"
+            src={bravuraLogo}
+            alt="Bravura Esporte Clube"
             width={36}
             height={36}
-            className="w-9 h-9"
+            className="h-9 w-9 object-contain"
           />
           <span className="font-display uppercase text-xl tracking-wider hidden sm:inline">
-            Bravura <span className="text-brand-red">FC</span>
+            Bravura <span className="text-brand-red">EC</span>
           </span>
         </Link>
 
@@ -66,13 +64,20 @@ export function Header() {
           >
             <Camera className="w-5 h-5" />
           </a>
+          <Link
+            href="/admin"
+            className="inline-flex items-center p-2 text-brand-gray hover:text-brand-gold transition-colors"
+            aria-label="Área administrativa"
+          >
+            <Shield className="w-4 h-4" />
+          </Link>
           <button
             onClick={openCart}
             className="relative p-2 text-brand-white hover:text-brand-gold transition-colors"
             aria-label="Carrinho"
           >
             <ShoppingBag className="w-5 h-5" />
-            {mounted && count > 0 && (
+            {count > 0 && (
               <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {count}
               </span>

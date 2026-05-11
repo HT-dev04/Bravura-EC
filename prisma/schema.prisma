@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model CmsMetadata {
+  id        String   @id @default("default")
+  seeded    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model Player {
+  id            String @id
+  slug          String @unique
+  name          String
+  nickname      String
+  number        Int
+  position      String
+  birthDate     String
+  height        Int
+  weight        Int
+  preferredFoot String
+  photo         String
+  bio           String
+  season        String
+  stats         Json
+  history       Json
+  monthlyGoals  Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Match {
+  id                String @id
+  opponent          String
+  opponentLogo      String
+  date              String
+  location          String
+  homeAway          String
+  competition       String
+  season            String
+  status            String
+  scoreHome         Int?
+  scoreAway         Int?
+  result            String?
+  events            Json
+  lineupStart       Json
+  lineupBench       Json
+  highlightPlayerId String?
+  highlightQuote    String?
+  gallery           Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model NewsItem {
+  id          String @id
+  slug        String @unique
+  title       String
+  excerpt     String
+  category    String
+  author      String
+  publishedAt String
+  cover       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model GalleryPhoto {
+  id        String @id
+  src       String
+  mediaType String?
+  album     String
+  season    String
+  caption   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String   @id
+  slug        String   @unique
+  name        String
+  category    String
+  price       Float
+  oldPrice    Float?
+  images      Json
+  description String
+  sizes       Json
+  stock       Int
+  featured    Boolean
+  isNew       Boolean
+  bestseller  Boolean
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Sponsor {
+  id        String   @id
+  name      String
+  logo      String
+  tier      String
+  website   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id        String @id
+  createdAt String
+  items     Json
+  subtotal  Float
+  shipping  Float
+  total     Float
+  customer  Json
+  status    String
+  updatedAt DateTime @updatedAt
+}
+
+model TeamStats {
+  id                   String @id @default("default")
+  games                Int
+  wins                 Int
+  draws                Int
+  losses               Int
+  goalsFor             Int
+  goalsAgainst         Int
+  winRate              Int
+  cleanSheets          Int
+  goalsByMonth         Json
+  winRateByCompetition Json
+  updatedAt            DateTime @updatedAt
+}
+
+model FinanceSettings {
+  id               String @id @default("default")
+  monthlyFeeAmount Float
+  updatedAt        DateTime @updatedAt
+}
+
+model MonthlyPayment {
+  playerId String
+  month    String
+  status   String
+  paidAt   String?
+
+  @@id([playerId, month])
+}
+
+model RevenueEntry {
+  id          String @id
+  date        String
+  description String
+  value       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExpenseEntry {
+  id          String @id
+  date        String
+  description String
+  value       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SponsorshipEntry {
+  id        String @id
+  date      String
+  name      String
+  photo     String
+  purpose   String
+  value     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

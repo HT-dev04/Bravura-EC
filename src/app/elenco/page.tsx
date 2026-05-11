@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { PlayerCard } from "@/components/site/PlayerCard";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,19 @@ import { Search } from "lucide-react";
 const positions: Array<Position | "Todos"> = ["Todos", "Goleiro", "Defensor", "Meia", "Atacante"];
 
 export default function ElencoPage() {
+  const [roster, setRoster] = useState(players);
   const [pos, setPos] = useState<Position | "Todos">("Todos");
   const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    fetch("/api/cms")
+      .then((res) => res.json())
+      .then((data) => data?.players && setRoster(data.players));
+  }, []);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return players.filter((p) => {
+    return roster.filter((p) => {
       const posOk = pos === "Todos" || p.position === pos;
       const searchOk =
         !q ||
@@ -25,7 +32,7 @@ export default function ElencoPage() {
         p.nickname.toLowerCase().includes(q);
       return posOk && searchOk;
     });
-  }, [pos, search]);
+  }, [roster, pos, search]);
 
   return (
     <SiteShell>
@@ -37,7 +44,7 @@ export default function ElencoPage() {
           <h1 className="font-display text-4xl md:text-6xl uppercase mb-2">
             Os atletas do Bravura
           </h1>
-          <p className="text-brand-gray">{players.length} jogadores na temporada 2025.</p>
+          <p className="text-brand-gray">{roster.length} jogadores na temporada 2026.</p>
         </div>
       </section>
 

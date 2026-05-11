@@ -6,7 +6,7 @@ import type { ProductCategory } from "@/types";
 
 export const metadata: Metadata = {
   title: "Loja Oficial",
-  description: "Camisas oficiais, uniformes, acessórios e produtos exclusivos do Bravura FC.",
+  description: "Camisas oficiais, uniformes, acessórios e produtos exclusivos do Bravura Esporte Clube.",
 };
 
 const categoryLabels: Record<ProductCategory, string> = {

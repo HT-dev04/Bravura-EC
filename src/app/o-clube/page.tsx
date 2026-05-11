@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { clubInfo } from "@/data/club";
+import { bravuraLogo } from "@/lib/asset-url";
 import { Shield, Target, Eye, Heart } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "O Clube",
   description:
-    "Conheça a história, missão, valores e identidade do Bravura FC — clube amador com tradição desde 2010.",
+    "Conheça a história, missão e valores do Bravura Esporte Clube — clube amador de Bugre-MG fundado em 2026 para resgatar talentos e fortalecer o futebol local.",
 };
 
 export default function ClubePage() {
@@ -20,28 +21,28 @@ export default function ClubePage() {
             O Clube
           </p>
           <h1 className="font-display text-4xl md:text-6xl uppercase mb-4">
-            A história do <span className="text-brand-red">Bravura FC</span>
+            A história do <span className="text-brand-red">Bravura EC</span>
           </h1>
           <p className="text-brand-white/80 max-w-3xl">
-            Tradição, raça e união. Conheça os bastidores do clube que nasceu no bairro e cresceu com a comunidade.
+            Nascido em Bugre-MG com o sonho de resgatar jovens talentos e fortalecer o futebol local. Conheça a história, missão e valores do Bravura Esporte Clube.
           </p>
         </div>
       </section>
 
       <section className="container-x py-14 grid lg:grid-cols-[2fr_1fr] gap-10">
         <div className="prose-bravura">
-          <h2>Uma história de coragem</h2>
+          <h2>Uma história de bravura</h2>
           {clubInfo.history.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
         </div>
         <div className="bg-brand-black-2 border border-brand-border rounded-sm p-8 text-center h-fit">
           <Image
-            src="/logo/bravura.svg"
-            alt="Escudo Bravura FC"
+            src={bravuraLogo}
+            alt="Escudo Bravura Esporte Clube"
             width={180}
             height={180}
-            className="mx-auto mb-4"
+            className="mx-auto mb-4 h-[180px] w-[180px] object-contain"
           />
           <p className="font-display text-xl uppercase">{clubInfo.name}</p>
           <p className="text-brand-gold text-sm italic mt-1">&ldquo;{clubInfo.motto}&rdquo;</p>
@@ -88,7 +89,7 @@ export default function ClubePage() {
         <h2 className="font-display text-3xl md:text-4xl uppercase mb-8">Linha do tempo</h2>
         <ol className="relative border-l-2 border-brand-red/40 ml-4 space-y-8">
           {clubInfo.timeline.map((t) => (
-            <li key={t.year} className="pl-6 relative">
+            <li key={t.id} className="pl-6 relative">
               <span className="absolute -left-[11px] top-1 w-5 h-5 bg-brand-red rounded-full border-4 border-brand-black" />
               <p className="font-display text-2xl text-brand-gold">{t.year}</p>
               <h3 className="font-display uppercase text-lg mt-1">{t.title}</h3>
@@ -122,11 +123,11 @@ export default function ClubePage() {
             </div>
             <div className="bg-brand-black-2 border border-brand-border rounded-sm p-10 flex items-center justify-center">
               <Image
-                src="/logo/bravura.svg"
+                src={bravuraLogo}
                 alt="Escudo Bravura"
                 width={260}
                 height={260}
-                className="drop-shadow-[0_0_40px_rgba(200,16,46,0.4)]"
+                className="h-[260px] w-[260px] object-contain drop-shadow-[0_0_40px_rgba(200,16,46,0.4)]"
               />
             </div>
           </div>

@@ -1,20 +1,9 @@
 "use client";
 
-import { useState, FormEvent } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
-import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle, Camera, Check } from "lucide-react";
+import { Mail, MessageCircle, Camera } from "lucide-react";
 
 export default function ContatoPage() {
-  const [sent, setSent] = useState(false);
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSent(true);
-    setTimeout(() => setSent(false), 4000);
-  }
-
   return (
     <SiteShell>
       <section className="diag-section py-14">
@@ -33,8 +22,8 @@ export default function ContatoPage() {
         <ContactCard
           icon={MessageCircle}
           title="WhatsApp"
-          detail="(11) 90000-0000"
-          href="https://wa.me/5511900000000"
+          detail="(33) 9879-7600"
+          href="https://wa.me/5533987976​00"
         />
         <ContactCard
           icon={Camera}
@@ -45,47 +34,26 @@ export default function ContatoPage() {
         <ContactCard
           icon={Mail}
           title="E-mail"
-          detail="contato@bravurafc.example"
-          href="mailto:contato@bravurafc.example"
+          detail="bravuraesporteclube@gmail.com"
+          href="mailto:bravuraesporteclube@gmail.com"
         />
       </section>
 
       <section className="container-x py-10 pb-20">
-        <div className="bg-brand-black-2 border border-brand-border rounded-sm p-6 md:p-10 max-w-3xl mx-auto">
-          <h2 className="font-display text-2xl md:text-3xl uppercase mb-6">Envie uma mensagem</h2>
-          <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label>Nome</Label>
-              <Input required placeholder="Seu nome" className="mt-1" />
-            </div>
-            <div>
-              <Label>E-mail</Label>
-              <Input required type="email" placeholder="voce@email.com" className="mt-1" />
-            </div>
-            <div className="md:col-span-2">
-              <Label>Assunto</Label>
-              <Select required className="mt-1" defaultValue="">
-                <option value="" disabled>Selecione um assunto</option>
-                <option value="amistoso">Marcar amistoso</option>
-                <option value="patrocinio">Patrocínio</option>
-                <option value="contato">Contato geral</option>
-                <option value="peneira">Peneira</option>
-                <option value="imprensa">Imprensa</option>
-              </Select>
-            </div>
-            <div className="md:col-span-2">
-              <Label>Mensagem</Label>
-              <Textarea required rows={6} placeholder="Sua mensagem" className="mt-1" />
-            </div>
-            <div className="md:col-span-2 flex items-center gap-4">
-              <Button type="submit" variant="primary">Enviar mensagem</Button>
-              {sent && (
-                <span className="inline-flex items-center gap-2 text-sm text-brand-gold">
-                  <Check className="w-4 h-4" /> Mensagem enviada com sucesso.
-                </span>
-              )}
-            </div>
-          </form>
+        <div className="bg-brand-black-2 border border-brand-border rounded-sm p-6 md:p-10 max-w-3xl mx-auto text-center">
+          <h2 className="font-display text-2xl md:text-3xl uppercase mb-3">Entre em contato</h2>
+          <p className="text-brand-gray max-w-xl mx-auto mb-6">
+            Fale diretamente com o Bravura pelo WhatsApp para assuntos sobre amistosos, patrocínios, peneiras e imprensa.
+          </p>
+          <a
+            href="https://wa.me/553398797600"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-sm bg-brand-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-red-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Entrar em contato
+          </a>
         </div>
       </section>
     </SiteShell>

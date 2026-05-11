@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Match } from "@/types";
+import { bravuraLogo } from "@/lib/asset-url";
 import { formatDateLong, formatTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -9,8 +10,8 @@ const resultVariant = { V: "green", E: "gray", D: "red" } as const;
 export function MatchCard({ match }: { match: Match }) {
   const homeTeam = match.homeAway === "casa" ? "Bravura" : match.opponent;
   const awayTeam = match.homeAway === "casa" ? match.opponent : "Bravura";
-  const homeLogo = match.homeAway === "casa" ? "/logo/bravura.svg" : match.opponentLogo;
-  const awayLogo = match.homeAway === "casa" ? match.opponentLogo : "/logo/bravura.svg";
+  const homeLogo = match.homeAway === "casa" ? bravuraLogo : match.opponentLogo;
+  const awayLogo = match.homeAway === "casa" ? match.opponentLogo : bravuraLogo;
 
   return (
     <Link
@@ -29,7 +30,7 @@ export function MatchCard({ match }: { match: Match }) {
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 p-5">
         <div className="flex items-center gap-3 justify-end">
           <span className="font-display uppercase text-lg text-right hidden sm:block">{homeTeam}</span>
-          <Image src={homeLogo} alt={homeTeam} width={44} height={44} className="w-11 h-11" />
+          <Image src={homeLogo} alt={homeTeam} width={44} height={44} className="h-11 w-11 object-contain" />
         </div>
         <div className="text-center">
           {match.status === "encerrada" ? (
@@ -46,7 +47,7 @@ export function MatchCard({ match }: { match: Match }) {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <Image src={awayLogo} alt={awayTeam} width={44} height={44} className="w-11 h-11" />
+          <Image src={awayLogo} alt={awayTeam} width={44} height={44} className="h-11 w-11 object-contain" />
           <span className="font-display uppercase text-lg hidden sm:block">{awayTeam}</span>
         </div>
       </div>

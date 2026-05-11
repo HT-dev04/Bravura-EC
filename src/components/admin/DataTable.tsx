@@ -15,6 +15,7 @@ interface DataTableProps<T> {
   rows: T[];
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  onBulkDelete?: (rows: T[]) => void;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -22,12 +23,64 @@ export function DataTable<T extends { id: string }>({
   rows,
   onEdit,
   onDelete,
+  onBulkDelete,
 }: DataTableProps<T>) {
+  const [selected, setSelected] = React.useState<string[]>([]);
+  const selectable = Boolean(onBulkDelete);
+  const selectedRows = rows.filter((row) => selected.includes(row.id));
+  const allSelected = rows.length > 0 && selectedRows.length === rows.length;
+
+  React.useEffect(() => {
+    setSelected((current) => current.filter((id) => rows.some((row) => row.id === id)));
+  }, [rows]);
+
+  function toggleAll() {
+    setSelected(allSelected ? [] : rows.map((row) => row.id));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  }
+
+  function handleBulkDelete() {
+    if (selectedRows.length === 0 || !onBulkDelete) return;
+    onBulkDelete(selectedRows);
+    setSelected([]);
+  }
+
   return (
-    <div className="border border-brand-border rounded-sm overflow-x-auto">
+    <div className="space-y-3">
+      {selectable && selectedRows.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-brand-black-2 border border-brand-border rounded-sm px-4 py-3">
+          <p className="text-sm text-brand-white/80">
+            {selectedRows.length} selecionado{selectedRows.length > 1 ? "s" : ""}
+          </p>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            className="text-xs uppercase tracking-wider font-semibold text-brand-red hover:underline"
+          >
+            Excluir selecionados
+          </button>
+        </div>
+      )}
+      <div className="border border-brand-border rounded-sm overflow-x-auto">
       <table className="w-full text-sm min-w-[700px]">
         <thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider">
           <tr>
+            {selectable && (
+              <th className="px-4 py-3 w-12">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  aria-label="Selecionar todos"
+                  className="accent-brand-red"
+                />
+              </th>
+            )}
             {columns.map((c) => (
               <th key={c.key} className={cn("text-left px-4 py-3 font-semibold", c.className)}>
                 {c.label}
@@ -39,6 +92,17 @@ export function DataTable<T extends { id: string }>({
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-t border-brand-border hover:bg-white/[0.03]">
+              {selectable && (
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(row.id)}
+                    onChange={() => toggleOne(row.id)}
+                    aria-label="Selecionar linha"
+                    className="accent-brand-red"
+                  />
+                </td>
+              )}
               {columns.map((c) => (
                 <td key={c.key} className={cn("px-4 py-3", c.className)}>
                   {c.render
@@ -71,7 +135,7 @@ export function DataTable<T extends { id: string }>({
           {rows.length === 0 && (
             <tr>
               <td
-                colSpan={columns.length + 1}
+                colSpan={columns.length + (onEdit || onDelete ? 1 : 0) + (selectable ? 1 : 0)}
                 className="px-4 py-8 text-center text-brand-gray"
               >
                 Nenhum registro encontrado.
@@ -80,6 +144,7 @@ export function DataTable<T extends { id: string }>({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

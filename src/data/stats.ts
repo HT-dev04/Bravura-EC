@@ -17,6 +17,11 @@ const goalsAgainst = finished.reduce((sum, m) => {
   return sum + (m.homeAway === "casa" ? m.scoreAway : m.scoreHome);
 }, 0);
 
+const cleanSheets = finished.filter((m) => {
+  if (m.scoreHome === null || m.scoreAway === null) return false;
+  return (m.homeAway === "casa" ? m.scoreAway : m.scoreHome) === 0;
+}).length;
+
 export const teamStats: TeamStatsSummary = {
   games: finished.length,
   wins,
@@ -24,7 +29,8 @@ export const teamStats: TeamStatsSummary = {
   losses,
   goalsFor,
   goalsAgainst,
-  winRate: finished.length > 0 ? Math.round((wins / finished.length) * 100) : 0,
+  winRate: finished.length > 0 ? Math.round(((wins * 3 + draws) / (finished.length * 3)) * 100) : 0,
+  cleanSheets,
   goalsByMonth: [
     { month: "Jan", goals: 3 },
     { month: "Fev", goals: 4 },

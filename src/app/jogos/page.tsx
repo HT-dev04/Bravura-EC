@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { MatchCard } from "@/components/site/MatchCard";
 import { Select } from "@/components/ui/input";
@@ -9,20 +9,27 @@ import type { MatchResult } from "@/types";
 import { cn } from "@/lib/utils";
 
 export default function JogosPage() {
+  const [list, setList] = useState(matches);
   const [season, setSeason] = useState("todas");
   const [competition, setCompetition] = useState("todas");
   const [result, setResult] = useState<MatchResult | "todos">("todos");
 
-  const seasons = Array.from(new Set(matches.map((m) => m.season)));
-  const competitions = Array.from(new Set(matches.map((m) => m.competition)));
+  useEffect(() => {
+    fetch("/api/cms")
+      .then((res) => res.json())
+      .then((data) => data?.matches && setList(data.matches));
+  }, []);
+
+  const seasons = Array.from(new Set(list.map((m) => m.season)));
+  const competitions = Array.from(new Set(list.map((m) => m.competition)));
 
   const filtered = useMemo(() => {
-    return matches
+    return list
       .filter((m) => season === "todas" || m.season === season)
       .filter((m) => competition === "todas" || m.competition === competition)
       .filter((m) => result === "todos" || m.result === result)
       .sort((a, b) => +new Date(b.date) - +new Date(a.date));
-  }, [season, competition, result]);
+  }, [list, season, competition, result]);
 
   return (
     <SiteShell>

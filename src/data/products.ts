@@ -1,15 +1,16 @@
+import { assetUrl } from "@/lib/asset-url";
 import type { Product } from "@/types";
 
-export const products: Product[] = [
+const productRows: Product[] = [
   {
     id: "pr01",
-    slug: "camisa-oficial-i-2025",
-    name: "Camisa Oficial I 2025",
+    slug: "camisa-oficial-i-2026",
+    name: "Camisa Oficial I 2026",
     category: "uniformes-jogo",
     price: 249.9,
     images: ["/products/camisa-i-1.jpg", "/products/camisa-i-2.jpg"],
     description:
-      "Camisa oficial de jogo do Bravura FC, modelo titular da temporada 2025. Tecido com tecnologia dry-fit, bordado oficial e faixa dourada lateral.",
+      "Camisa oficial de jogo do Bravura Esporte Clube, modelo titular da temporada 2026. Tecido com tecnologia dry-fit, bordado oficial e faixa dourada lateral.",
     sizes: ["P", "M", "G", "GG"],
     stock: 42,
     featured: true,
@@ -18,13 +19,13 @@ export const products: Product[] = [
   },
   {
     id: "pr02",
-    slug: "camisa-oficial-ii-2025",
-    name: "Camisa Oficial II 2025",
+    slug: "camisa-oficial-ii-2026",
+    name: "Camisa Oficial II 2026",
     category: "uniformes-jogo",
     price: 249.9,
     images: ["/products/camisa-ii-1.jpg", "/products/camisa-ii-2.jpg"],
     description:
-      "Camisa oficial reserva do Bravura FC. Versão branca com detalhes em vermelho e dourado.",
+      "Camisa oficial reserva do Bravura Esporte Clube. Versão branca com detalhes em vermelho e dourado.",
     sizes: ["P", "M", "G", "GG"],
     stock: 30,
     featured: true,
@@ -33,8 +34,8 @@ export const products: Product[] = [
   },
   {
     id: "pr03",
-    slug: "camisa-oficial-iii-2025",
-    name: "Camisa Oficial III 2025",
+    slug: "camisa-oficial-iii-2026",
+    name: "Camisa Oficial III 2026",
     category: "uniformes-jogo",
     price: 269.9,
     images: ["/products/camisa-iii-1.jpg"],
@@ -66,7 +67,7 @@ export const products: Product[] = [
     category: "treino",
     price: 299.9,
     images: ["/products/jaqueta-1.jpg"],
-    description: "Jaqueta oficial do Bravura FC para dias frios, com capuz e bordado.",
+    description: "Jaqueta oficial do Bravura Esporte Clube para dias frios, com capuz e bordado.",
     sizes: ["P", "M", "G", "GG"],
     stock: 22,
     featured: true,
@@ -76,7 +77,7 @@ export const products: Product[] = [
   {
     id: "pr06",
     slug: "short-oficial",
-    name: "Short Oficial I 2025",
+    name: "Short Oficial I 2026",
     category: "uniformes-jogo",
     price: 129.9,
     images: ["/products/short-1.jpg"],
@@ -94,7 +95,7 @@ export const products: Product[] = [
     category: "uniformes-jogo",
     price: 49.9,
     images: ["/products/meiao-1.jpg"],
-    description: "Meião oficial do Bravura FC, cano alto e com reforço nos pés.",
+    description: "Meião oficial do Bravura Esporte Clube, cano alto e com reforço nos pés.",
     sizes: ["P", "M", "G", "GG"],
     stock: 80,
     featured: false,
@@ -173,6 +174,11 @@ export const products: Product[] = [
     bestseller: true,
   },
 ];
+
+export const products: Product[] = productRows.map((product) => ({
+  ...product,
+  images: product.images.map(assetUrl),
+}));
 
 export function getProductBySlug(slug: string) {
   return products.find((p) => p.slug === slug);

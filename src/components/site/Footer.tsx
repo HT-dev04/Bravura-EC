@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Camera, Mail, MapPin, Phone } from "lucide-react";
 import { clubInfo } from "@/data/club";
+import { bravuraLogo } from "@/lib/asset-url";
 
 export function Footer() {
   return (
@@ -9,9 +10,15 @@ export function Footer() {
       <div className="container-x py-12 grid gap-10 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <Image src="/logo/bravura.svg" alt="Bravura FC" width={40} height={40} />
+            <Image
+              src={bravuraLogo}
+              alt="Bravura Esporte Clube"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
             <span className="font-display uppercase text-xl tracking-wider">
-              Bravura <span className="text-brand-red">FC</span>
+              Bravura <span className="text-brand-red">EC</span>
             </span>
           </div>
           <p className="text-sm text-brand-gray italic">&ldquo;{clubInfo.motto}&rdquo;</p>
@@ -36,6 +43,7 @@ export function Footer() {
             <li><Link href="/patrocinadores" className="text-brand-white/80 hover:text-white">Patrocinadores</Link></li>
             <li><Link href="/loja" className="text-brand-white/80 hover:text-white">Loja Oficial</Link></li>
             <li><Link href="/contato" className="text-brand-white/80 hover:text-white">Contato</Link></li>
+            <li><Link href="/admin" className="text-brand-white/80 hover:text-white">Área Admin</Link></li>
           </ul>
         </div>
 
@@ -44,15 +52,15 @@ export function Footer() {
           <ul className="space-y-3 text-sm text-brand-white/80">
             <li className="flex items-start gap-2">
               <MapPin className="w-4 h-4 mt-0.5 text-brand-red" />
-              <span>Estádio Municipal da Vila<br />Rua do Clube, 123</span>
+              <span>Bugre, Minas Gerais</span>
             </li>
             <li className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-brand-red" />
-              <span>(11) 90000-0000</span>
+              <a href="https://wa.me/5533987976​00">(33) 9879-7600</a>
             </li>
             <li className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-brand-red" />
-              <a href="mailto:contato@bravurafc.example">contato@bravurafc.example</a>
+              <a href="mailto:bravuraesporteclube@gmail.com">bravuraesporteclube@gmail.com</a>
             </li>
             <li>
               <a
@@ -71,8 +79,8 @@ export function Footer() {
 
       <div className="border-t border-brand-border">
         <div className="container-x py-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-brand-gray">
-          <p>© {new Date().getFullYear()} Bravura FC. Todos os direitos reservados.</p>
-          <p className="uppercase tracking-wider">Coragem dentro e fora de campo.</p>
+          <p>© {new Date().getFullYear()} Bravura Esporte Clube. Todos os direitos reservados.</p>
+          <p className="uppercase tracking-wider">Com união e bravura, sonhos se tornam realidade.</p>
         </div>
       </div>
     </footer>
