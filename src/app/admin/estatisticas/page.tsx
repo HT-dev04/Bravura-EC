@@ -141,7 +141,44 @@ export default function AdminEstatisticasPage() {
             <Button variant="primary" onClick={() => savePlayers()} disabled={savingPlayers}>{savingPlayers ? "Salvando..." : "Salvar jogadores"}</Button>
           </div>
 
-          <div className="border border-brand-border rounded-sm overflow-x-auto">
+          {/* Mobile: cards com inputs */}
+          <div className="md:hidden border border-brand-border rounded-sm divide-y divide-brand-border">
+            {players.length === 0 ? (
+              <p className="px-4 py-8 text-center text-brand-gray text-sm">Nenhum jogador cadastrado.</p>
+            ) : players.map((player) => (
+              <div key={player.id} className="p-3 space-y-3">
+                <p className="font-semibold text-sm">{player.nickname || player.name}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">Jogos</p>
+                    <InlineNumber value={player.stats.games} onChange={(games) => updatePlayer(player.id, { ...player, stats: { ...player.stats, games } })} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">Gols</p>
+                    <InlineNumber value={player.stats.goals} onChange={(goals) => updatePlayer(player.id, { ...player, stats: { ...player.stats, goals } })} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">Assistências</p>
+                    <InlineNumber value={player.stats.assists} onChange={(assists) => updatePlayer(player.id, { ...player, stats: { ...player.stats, assists } })} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">Amarelos</p>
+                    <InlineNumber value={player.stats.yellowCards} onChange={(yellowCards) => updatePlayer(player.id, { ...player, stats: { ...player.stats, yellowCards } })} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">Vermelhos</p>
+                    <InlineNumber value={player.stats.redCards} onChange={(redCards) => updatePlayer(player.id, { ...player, stats: { ...player.stats, redCards } })} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">Minutos</p>
+                    <InlineNumber value={player.stats.minutes} onChange={(minutes) => updatePlayer(player.id, { ...player, stats: { ...player.stats, minutes } })} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop: tabela */}
+          <div className="hidden md:block border border-brand-border rounded-sm overflow-x-auto">
             <table className="w-full text-sm min-w-[980px]">
               <thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider">
                 <tr>

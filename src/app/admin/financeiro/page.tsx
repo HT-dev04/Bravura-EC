@@ -312,7 +312,30 @@ export default function AdminFinanceiroPage() {
               />
             </div>
           </div>
-          <div className="border border-brand-border rounded-sm overflow-x-auto">
+          {/* Mobile: cards */}
+          <div className="md:hidden border border-brand-border rounded-sm divide-y divide-brand-border">
+            {players.length === 0 ? (
+              <p className="px-4 py-8 text-center text-brand-gray text-sm">Nenhum jogador cadastrado.</p>
+            ) : players.map((player) => {
+              const status = paymentStatus(player.id);
+              return (
+                <div key={player.id} className="p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-sm">{player.name}</p>
+                    <Badge variant={status === "pago" ? "green" : status === "isento" ? "gold" : "gray"}>{status}</Badge>
+                  </div>
+                  <p className="text-xs text-brand-gray">{player.position}</p>
+                  <div className="flex gap-3 pt-1 border-t border-brand-border/50">
+                    <button className="text-xs uppercase text-green-400 hover:underline font-semibold" onClick={() => setPayment(player.id, "pago")}>Pago</button>
+                    <button className="text-xs uppercase text-brand-gold hover:underline font-semibold" onClick={() => setPayment(player.id, "isento")}>Isento</button>
+                    <button className="text-xs uppercase text-brand-red hover:underline font-semibold" onClick={() => setPayment(player.id, "pendente")}>Desfazer</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: tabela */}
+          <div className="hidden md:block border border-brand-border rounded-sm overflow-x-auto">
             <table className="w-full text-sm min-w-[760px]">
               <thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider">
                 <tr>
@@ -426,16 +449,184 @@ function SummaryCard({ label, value, detail }: { label: string; value: string; d
 
 function MonthlySummary({ movements, income, expenses, monthlyTotal, revenueTotal, sponsorshipTotal, selectedMonth }: { movements: MonthlyMovement[]; income: number; expenses: number; monthlyTotal: number; revenueTotal: number; sponsorshipTotal: number; selectedMonth: string }) {
   const balance = income - expenses;
-
-  return <section className="space-y-4"><div className="grid md:grid-cols-4 gap-3"><SummaryCard label="Entrou no mês" value={formatCurrency(income)} detail="Mensalidades + receitas + patrocínios" /><SummaryCard label="Gastou no mês" value={formatCurrency(expenses)} detail="Total de gastos registrados" /><SummaryCard label="Saldo do mês" value={formatCurrency(balance)} detail={balance >= 0 ? "Resultado positivo" : "Resultado negativo"} /><SummaryCard label="Movimentações" value={String(movements.length)} detail={`Referência ${selectedMonth}`} /></div><div className="bg-brand-black-2 border border-brand-border rounded-sm p-4"><h2 className="font-display uppercase text-lg text-brand-gold">Resumo mensal</h2><div className="grid sm:grid-cols-3 gap-3 mt-4 text-sm"><div className="bg-brand-black border border-brand-border rounded-sm p-3"><p className="text-xs uppercase tracking-wider text-brand-gray">Mensalidades</p><p className="font-semibold text-white mt-1">{formatCurrency(monthlyTotal)}</p></div><div className="bg-brand-black border border-brand-border rounded-sm p-3"><p className="text-xs uppercase tracking-wider text-brand-gray">Receitas</p><p className="font-semibold text-white mt-1">{formatCurrency(revenueTotal)}</p></div><div className="bg-brand-black border border-brand-border rounded-sm p-3"><p className="text-xs uppercase tracking-wider text-brand-gray">Patrocínios</p><p className="font-semibold text-white mt-1">{formatCurrency(sponsorshipTotal)}</p></div></div></div><div className="border border-brand-border rounded-sm overflow-x-auto"><table className="w-full text-sm min-w-[760px]"><thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider"><tr><th className="text-left px-4 py-3">Data</th><th className="text-left px-4 py-3">Tipo</th><th className="text-left px-4 py-3">Descrição</th><th className="text-right px-4 py-3">Valor</th></tr></thead><tbody>{movements.map((row) => <tr key={row.id} className="border-t border-brand-border"><td className="px-4 py-3">{row.date.length === 7 ? row.date : formatDate(row.date)}</td><td className="px-4 py-3"><Badge variant={row.type === "Entrada" ? "green" : "gray"}>{row.type}</Badge></td><td className="px-4 py-3">{row.description}</td><td className={`px-4 py-3 text-right font-semibold ${row.type === "Entrada" ? "text-brand-gold" : "text-brand-red"}`}>{row.type === "Entrada" ? "+" : "-"}{formatCurrency(row.value)}</td></tr>)}{movements.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-brand-gray">Nenhuma movimentação encontrada para este mês.</td></tr>}</tbody></table></div></section>;
+  return (
+    <section className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <SummaryCard label="Entrou no mês" value={formatCurrency(income)} detail="Mensalidades + receitas + patrocínios" />
+        <SummaryCard label="Gastou no mês" value={formatCurrency(expenses)} detail="Total de gastos registrados" />
+        <SummaryCard label="Saldo do mês" value={formatCurrency(balance)} detail={balance >= 0 ? "Resultado positivo" : "Resultado negativo"} />
+        <SummaryCard label="Movimentações" value={String(movements.length)} detail={`Referência ${selectedMonth}`} />
+      </div>
+      <div className="bg-brand-black-2 border border-brand-border rounded-sm p-4">
+        <h2 className="font-display uppercase text-lg text-brand-gold">Resumo mensal</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-sm">
+          <div className="bg-brand-black border border-brand-border rounded-sm p-3"><p className="text-xs uppercase tracking-wider text-brand-gray">Mensalidades</p><p className="font-semibold text-white mt-1">{formatCurrency(monthlyTotal)}</p></div>
+          <div className="bg-brand-black border border-brand-border rounded-sm p-3"><p className="text-xs uppercase tracking-wider text-brand-gray">Receitas</p><p className="font-semibold text-white mt-1">{formatCurrency(revenueTotal)}</p></div>
+          <div className="bg-brand-black border border-brand-border rounded-sm p-3"><p className="text-xs uppercase tracking-wider text-brand-gray">Patrocínios</p><p className="font-semibold text-white mt-1">{formatCurrency(sponsorshipTotal)}</p></div>
+        </div>
+      </div>
+      {/* Mobile: cards */}
+      <div className="md:hidden border border-brand-border rounded-sm divide-y divide-brand-border">
+        {movements.length === 0 ? (
+          <p className="px-4 py-8 text-center text-brand-gray text-sm">Nenhuma movimentação encontrada para este mês.</p>
+        ) : movements.map((row) => (
+          <div key={row.id} className="p-3 space-y-1">
+            <div className="flex items-start justify-between gap-2">
+              <Badge variant={row.type === "Entrada" ? "green" : "gray"}>{row.type}</Badge>
+              <span className={`font-semibold text-sm ${row.type === "Entrada" ? "text-brand-gold" : "text-brand-red"}`}>
+                {row.type === "Entrada" ? "+" : "-"}{formatCurrency(row.value)}
+              </span>
+            </div>
+            <p className="text-sm">{row.description}</p>
+            <p className="text-xs text-brand-gray">{row.date.length === 7 ? row.date : formatDate(row.date)}</p>
+          </div>
+        ))}
+      </div>
+      {/* Desktop: tabela */}
+      <div className="hidden md:block border border-brand-border rounded-sm overflow-x-auto">
+        <table className="w-full text-sm min-w-[760px]">
+          <thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider">
+            <tr>
+              <th className="text-left px-4 py-3">Data</th>
+              <th className="text-left px-4 py-3">Tipo</th>
+              <th className="text-left px-4 py-3">Descrição</th>
+              <th className="text-right px-4 py-3">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {movements.map((row) => (
+              <tr key={row.id} className="border-t border-brand-border">
+                <td className="px-4 py-3">{row.date.length === 7 ? row.date : formatDate(row.date)}</td>
+                <td className="px-4 py-3"><Badge variant={row.type === "Entrada" ? "green" : "gray"}>{row.type}</Badge></td>
+                <td className="px-4 py-3">{row.description}</td>
+                <td className={`px-4 py-3 text-right font-semibold ${row.type === "Entrada" ? "text-brand-gold" : "text-brand-red"}`}>
+                  {row.type === "Entrada" ? "+" : "-"}{formatCurrency(row.value)}
+                </td>
+              </tr>
+            ))}
+            {movements.length === 0 && (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-brand-gray">Nenhuma movimentação encontrada para este mês.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }
 
 function FinanceList({ title, button, rows, valueClassName = "text-brand-gold", onNew, onEdit, onDelete }: { title: string; button: string; rows: RevenueEntry[]; valueClassName?: string; onNew: () => void; onEdit: (row: RevenueEntry) => void; onDelete: (id: string) => void }) {
-  return <section className="space-y-4"><div className="flex items-center justify-between"><h2 className="font-display uppercase text-lg text-brand-gold">{title}</h2><Button variant="primary" onClick={onNew}><Plus className="w-4 h-4" /> {button}</Button></div><div className="border border-brand-border rounded-sm overflow-x-auto"><table className="w-full text-sm min-w-[700px]"><thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider"><tr><th className="text-left px-4 py-3">Data</th><th className="text-left px-4 py-3">Descrição</th><th className="text-left px-4 py-3">Valor</th><th className="text-right px-4 py-3">Ações</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id} className="border-t border-brand-border"><td className="px-4 py-3">{formatDate(row.date)}</td><td className="px-4 py-3">{row.description}</td><td className={`px-4 py-3 font-semibold ${valueClassName}`}>{formatCurrency(row.value)}</td><td className="px-4 py-3 text-right space-x-2"><button className="text-xs uppercase text-brand-gold hover:underline" onClick={() => onEdit(row)}>Editar</button><button className="text-xs uppercase text-brand-red hover:underline" onClick={() => onDelete(row.id)}>Excluir</button></td></tr>)}{rows.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-brand-gray">Nenhum registro encontrado.</td></tr>}</tbody></table></div></section>;
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display uppercase text-lg text-brand-gold">{title}</h2>
+        <Button variant="primary" onClick={onNew}><Plus className="w-4 h-4" /> {button}</Button>
+      </div>
+      {/* Mobile: cards */}
+      <div className="md:hidden border border-brand-border rounded-sm divide-y divide-brand-border">
+        {rows.length === 0 ? (
+          <p className="px-4 py-8 text-center text-brand-gray text-sm">Nenhum registro encontrado.</p>
+        ) : rows.map((row) => (
+          <div key={row.id} className="p-3 space-y-1">
+            <div className="flex items-start justify-between gap-2">
+              <span className={`font-semibold ${valueClassName}`}>{formatCurrency(row.value)}</span>
+              <span className="text-xs text-brand-gray shrink-0">{formatDate(row.date)}</span>
+            </div>
+            <p className="text-sm text-brand-white/80">{row.description}</p>
+            <div className="flex gap-4 pt-2 border-t border-brand-border/50">
+              <button className="text-xs uppercase text-brand-gold hover:underline font-semibold" onClick={() => onEdit(row)}>Editar</button>
+              <button className="text-xs uppercase text-brand-red hover:underline font-semibold" onClick={() => onDelete(row.id)}>Excluir</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Desktop: tabela */}
+      <div className="hidden md:block border border-brand-border rounded-sm overflow-x-auto">
+        <table className="w-full text-sm min-w-[700px]">
+          <thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider">
+            <tr>
+              <th className="text-left px-4 py-3">Data</th>
+              <th className="text-left px-4 py-3">Descrição</th>
+              <th className="text-left px-4 py-3">Valor</th>
+              <th className="text-right px-4 py-3">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="border-t border-brand-border">
+                <td className="px-4 py-3">{formatDate(row.date)}</td>
+                <td className="px-4 py-3">{row.description}</td>
+                <td className={`px-4 py-3 font-semibold ${valueClassName}`}>{formatCurrency(row.value)}</td>
+                <td className="px-4 py-3 text-right space-x-2">
+                  <button className="text-xs uppercase text-brand-gold hover:underline" onClick={() => onEdit(row)}>Editar</button>
+                  <button className="text-xs uppercase text-brand-red hover:underline" onClick={() => onDelete(row.id)}>Excluir</button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-brand-gray">Nenhum registro encontrado.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }
 
 function SponsorList({ rows, onNew, onEdit, onDelete }: { rows: SponsorshipEntry[]; onNew: () => void; onEdit: (row: SponsorshipEntry) => void; onDelete: (id: string) => void }) {
-  return <section className="space-y-4"><div className="flex items-center justify-between"><h2 className="font-display uppercase text-lg text-brand-gold">Patrocínio</h2><Button variant="primary" onClick={onNew}><Plus className="w-4 h-4" /> Novo patrocínio</Button></div><div className="border border-brand-border rounded-sm overflow-x-auto"><table className="w-full text-sm min-w-[760px]"><thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider"><tr><th className="text-left px-4 py-3">Data</th><th className="text-left px-4 py-3">Nome</th><th className="text-left px-4 py-3">Finalidade</th><th className="text-left px-4 py-3">Valor</th><th className="text-right px-4 py-3">Ações</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id} className="border-t border-brand-border"><td className="px-4 py-3">{formatDate(row.date)}</td><td className="px-4 py-3 font-semibold">{row.name}</td><td className="px-4 py-3 text-brand-gray">{row.purpose}</td><td className="px-4 py-3 text-brand-gold font-semibold">{formatCurrency(row.value)}</td><td className="px-4 py-3 text-right space-x-2"><button className="text-xs uppercase text-brand-gold hover:underline" onClick={() => onEdit(row)}>Editar</button><button className="text-xs uppercase text-brand-red hover:underline" onClick={() => onDelete(row.id)}>Excluir</button></td></tr>)}{rows.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-brand-gray">Nenhum patrocínio registrado.</td></tr>}</tbody></table></div></section>;
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display uppercase text-lg text-brand-gold">Patrocínio</h2>
+        <Button variant="primary" onClick={onNew}><Plus className="w-4 h-4" /> Novo patrocínio</Button>
+      </div>
+      {/* Mobile: cards */}
+      <div className="md:hidden border border-brand-border rounded-sm divide-y divide-brand-border">
+        {rows.length === 0 ? (
+          <p className="px-4 py-8 text-center text-brand-gray text-sm">Nenhum patrocínio registrado.</p>
+        ) : rows.map((row) => (
+          <div key={row.id} className="p-3 space-y-1">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-sm">{row.name}</p>
+              <span className="text-brand-gold font-semibold text-sm shrink-0">{formatCurrency(row.value)}</span>
+            </div>
+            <p className="text-xs text-brand-gray">{formatDate(row.date)}</p>
+            {row.purpose && <p className="text-sm text-brand-white/70">{row.purpose}</p>}
+            <div className="flex gap-4 pt-2 border-t border-brand-border/50">
+              <button className="text-xs uppercase text-brand-gold hover:underline font-semibold" onClick={() => onEdit(row)}>Editar</button>
+              <button className="text-xs uppercase text-brand-red hover:underline font-semibold" onClick={() => onDelete(row.id)}>Excluir</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Desktop: tabela */}
+      <div className="hidden md:block border border-brand-border rounded-sm overflow-x-auto">
+        <table className="w-full text-sm min-w-[760px]">
+          <thead className="bg-white/5 text-brand-gray uppercase text-[10px] tracking-wider">
+            <tr>
+              <th className="text-left px-4 py-3">Data</th>
+              <th className="text-left px-4 py-3">Nome</th>
+              <th className="text-left px-4 py-3">Finalidade</th>
+              <th className="text-left px-4 py-3">Valor</th>
+              <th className="text-right px-4 py-3">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="border-t border-brand-border">
+                <td className="px-4 py-3">{formatDate(row.date)}</td>
+                <td className="px-4 py-3 font-semibold">{row.name}</td>
+                <td className="px-4 py-3 text-brand-gray">{row.purpose}</td>
+                <td className="px-4 py-3 text-brand-gold font-semibold">{formatCurrency(row.value)}</td>
+                <td className="px-4 py-3 text-right space-x-2">
+                  <button className="text-xs uppercase text-brand-gold hover:underline" onClick={() => onEdit(row)}>Editar</button>
+                  <button className="text-xs uppercase text-brand-red hover:underline" onClick={() => onDelete(row.id)}>Excluir</button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-brand-gray">Nenhum patrocínio registrado.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }
 
 function FormActions({ saving, onCancel }: { saving: boolean; onCancel: () => void }) {

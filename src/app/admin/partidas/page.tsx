@@ -294,43 +294,49 @@ export default function AdminPartidasPage() {
                 {editing.events.map((ev, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-1 sm:grid-cols-[60px_1fr_1fr_1fr_auto] gap-2 items-center bg-brand-black border border-brand-border rounded-sm p-2"
+                    className="bg-brand-black border border-brand-border rounded-sm p-2 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[60px_1fr_1fr_1fr_auto] sm:gap-2 sm:items-center"
                   >
-                    <Input
-                      type="number"
-                      value={ev.minute}
-                      placeholder="min"
-                      onChange={(e) => updateEvent(i, { minute: +e.target.value })}
-                    />
-                    <Select
-                      value={ev.type}
-                      onChange={(e) => updateEvent(i, { type: e.target.value as MatchEvent["type"] })}
-                    >
-                      <option value="gol">Gol</option>
-                      <option value="assistencia">Assistência</option>
-                      <option value="cartao_amarelo">Cartão amarelo</option>
-                      <option value="cartao_vermelho">Cartão vermelho</option>
-                      <option value="substituicao">Substituição</option>
-                    </Select>
-                    <Input
-                      placeholder="Jogador"
-                      value={ev.playerName}
-                      onChange={(e) => updateEvent(i, { playerName: e.target.value })}
-                    />
-                    <Select
-                      value={ev.team}
-                      onChange={(e) => updateEvent(i, { team: e.target.value as MatchEvent["team"] })}
-                    >
-                      <option value="bravura">Bravura</option>
-                      <option value="adversario">Adversário</option>
-                    </Select>
-                    <button
-                      type="button"
-                      onClick={() => removeEvent(i)}
-                      className="text-brand-red p-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Mobile: linha 1 — minuto + tipo */}
+                    <div className="grid grid-cols-[64px_1fr] gap-2 sm:contents">
+                      <Input
+                        type="number"
+                        value={ev.minute}
+                        placeholder="min"
+                        onChange={(e) => updateEvent(i, { minute: +e.target.value })}
+                      />
+                      <Select
+                        value={ev.type}
+                        onChange={(e) => updateEvent(i, { type: e.target.value as MatchEvent["type"] })}
+                      >
+                        <option value="gol">Gol</option>
+                        <option value="assistencia">Assistência</option>
+                        <option value="cartao_amarelo">Cartão amarelo</option>
+                        <option value="cartao_vermelho">Cartão vermelho</option>
+                        <option value="substituicao">Substituição</option>
+                      </Select>
+                    </div>
+                    {/* Mobile: linha 2 — jogador + time + excluir */}
+                    <div className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:contents">
+                      <Input
+                        placeholder="Jogador"
+                        value={ev.playerName}
+                        onChange={(e) => updateEvent(i, { playerName: e.target.value })}
+                      />
+                      <Select
+                        value={ev.team}
+                        onChange={(e) => updateEvent(i, { team: e.target.value as MatchEvent["team"] })}
+                      >
+                        <option value="bravura">Bravura</option>
+                        <option value="adversario">Adversário</option>
+                      </Select>
+                      <button
+                        type="button"
+                        onClick={() => removeEvent(i)}
+                        className="text-brand-red p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
