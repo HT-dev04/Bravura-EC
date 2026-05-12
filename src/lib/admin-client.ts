@@ -46,6 +46,20 @@ export async function uploadAdminFile(file: File) {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-  if (!res.ok) throw new Error("Falha ao enviar arquivo");
-  return (await res.json()) as { url: string; type: "image" | "video" };
+  const text = await res.text();
+  const payload = text ? safeJsonParse(text) : null;
+
+  if (!res.ok || !payload?.url) {
+    throw new Error(payload?.error || `Falha ao enviar arquivo (HTTP ${res.status})`);
+  }
+
+  return payload as { url: string; type: "image" | "video" };
+}
+
+function safeJsonParse(text: string) {
+  try {
+    return JSON.parse(text) as { error?: string; url?: string; type?: "image" | "video" };
+  } catch {
+    return null;
+  }
 }

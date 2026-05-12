@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
 import { slugify } from "@/lib/utils";
 import type { Player, Position } from "@/types";
 
@@ -18,6 +17,7 @@ export default function AdminJogadoresPage() {
   const [editing, setEditing] = useState<Player | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function AdminJogadoresPage() {
       height: 175,
       weight: 70,
       preferredFoot: "Direito",
-      photo: assetUrl("/players/placeholder.jpg"),
+      photo: "",
       bio: "",
       season: "2026",
       stats: { games: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0, minutes: 0 },
@@ -184,8 +184,9 @@ export default function AdminJogadoresPage() {
                 required
                 type="number"
                 className="mt-1"
-                value={editing.number}
-                onChange={(e) => setEditing({ ...editing, number: +e.target.value })}
+                placeholder="0"
+                value={editing.number || ""}
+                onChange={(e) => setEditing({ ...editing, number: e.target.value === "" ? 0 : +e.target.value })}
               />
             </div>
             <div>
@@ -217,19 +218,33 @@ export default function AdminJogadoresPage() {
                 <option>Ambos</option>
               </Select>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Foto</Label>
               <Input
                 type="file"
+                accept="image/*"
                 className="mt-1"
+                disabled={uploading}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (file) {
+                  if (!file) return;
+                  setUploading(true);
+                  setError(null);
+                  try {
                     const upload = await uploadAdminFile(file);
-                    setEditing({ ...editing, photo: upload.url });
+                    setEditing((prev) => prev ? { ...prev, photo: upload.url } : prev);
+                  } catch (error) {
+                    setError(error instanceof Error ? error.message : "Falha ao enviar foto. Verifique sua conexão e tente novamente.");
+                  } finally {
+                    setUploading(false);
                   }
                 }}
               />
+              {uploading && <p className="text-xs text-brand-gray mt-1">Enviando foto...</p>}
+              {editing.photo && !uploading && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editing.photo} alt="Preview" className="mt-2 h-24 w-auto rounded-sm object-cover" />
+              )}
             </div>
             <div className="col-span-1 sm:col-span-2 flex flex-wrap justify-end gap-2">
               <Button
@@ -242,7 +257,7 @@ export default function AdminJogadoresPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+              <Button type="submit" variant="primary" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>

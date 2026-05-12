@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
 import type { Match, MatchEvent } from "@/types";
 import { formatDate } from "@/lib/utils";
 
@@ -16,6 +15,7 @@ export default function AdminPartidasPage() {
   const [editing, setEditing] = useState<Match | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function AdminPartidasPage() {
     setEditing({
       id: `m${Date.now()}`,
       opponent: "",
-      opponentLogo: assetUrl("/sponsors/adv-generico.svg"),
+      opponentLogo: "",
       date: new Date().toISOString(),
       location: "",
       homeAway: "casa",
@@ -165,20 +165,33 @@ export default function AdminPartidasPage() {
                   onChange={(e) => setEditing({ ...editing, opponent: e.target.value })}
                 />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <Label>Escudo do adversário</Label>
                 <Input
                   type="file"
                   accept="image/*"
                   className="mt-1"
+                  disabled={uploading}
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
+                    if (!file) return;
+                    setUploading(true);
+                    setMessage(null);
+                    try {
                       const upload = await uploadAdminFile(file);
-                      setEditing({ ...editing, opponentLogo: upload.url });
+                      setEditing((prev) => prev ? { ...prev, opponentLogo: upload.url } : prev);
+                    } catch (error) {
+                      setMessage(error instanceof Error ? error.message : "Falha ao enviar imagem. Verifique sua conexão e tente novamente.");
+                    } finally {
+                      setUploading(false);
                     }
                   }}
                 />
+                {uploading && <p className="text-xs text-brand-gray mt-1">Enviando imagem...</p>}
+                {editing.opponentLogo && !uploading && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={editing.opponentLogo} alt="Preview" className="mt-2 h-16 w-auto object-contain" />
+                )}
               </div>
               <div>
                 <Label>Data</Label>
@@ -285,6 +298,57 @@ export default function AdminPartidasPage() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
+                <Label>Galeria da partida</Label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-brand-border px-3 py-2 text-xs uppercase text-brand-white hover:border-brand-gold">
+                  <Plus className="w-3 h-3" /> Adicionar imagem
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      setUploading(true);
+                      setMessage(null);
+                      try {
+                        const upload = await uploadAdminFile(file);
+                        setEditing((prev) => prev ? { ...prev, gallery: [...prev.gallery, upload.url] } : prev);
+                      } catch (error) {
+                        setMessage(error instanceof Error ? error.message : "Falha ao enviar imagem. Verifique sua conexão e tente novamente.");
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              {uploading && <p className="text-xs text-brand-gray mb-2">Enviando imagem...</p>}
+              {editing.gallery.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {editing.gallery.map((src, i) => (
+                    <div key={`${src}-${i}`} className="relative overflow-hidden rounded-sm border border-brand-border bg-brand-black">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt={`Foto ${i + 1} da partida`} className="h-24 w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...editing, gallery: editing.gallery.filter((_, idx) => idx !== i) })}
+                        className="absolute right-1 top-1 rounded-sm bg-black/70 p-1 text-brand-red"
+                        aria-label="Remover imagem da galeria"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-sm border border-dashed border-brand-border p-3 text-sm text-brand-gray">Nenhuma imagem adicionada.</p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
                 <Label>Eventos (gols, cartões, etc.)</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addEvent}>
                   <Plus className="w-3 h-3" /> Adicionar
@@ -300,9 +364,9 @@ export default function AdminPartidasPage() {
                     <div className="grid grid-cols-[64px_1fr] gap-2 sm:contents">
                       <Input
                         type="number"
-                        value={ev.minute}
+                        value={ev.minute || ""}
                         placeholder="min"
-                        onChange={(e) => updateEvent(i, { minute: +e.target.value })}
+                        onChange={(e) => updateEvent(i, { minute: e.target.value === "" ? 0 : +e.target.value })}
                       />
                       <Select
                         value={ev.type}
@@ -353,7 +417,7 @@ export default function AdminPartidasPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+              <Button type="submit" variant="primary" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>

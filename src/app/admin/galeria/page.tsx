@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
 import type { GalleryPhoto, GalleryAlbum } from "@/types";
 
 function makeUniqueGalleryRows(items: GalleryPhoto[]) {
@@ -29,6 +29,7 @@ export default function AdminGaleriaPage() {
   const [editing, setEditing] = useState<GalleryPhoto | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function AdminGaleriaPage() {
   function handleNew() {
     setEditing({
       id: `g${Date.now()}`,
-      src: assetUrl("/gallery/placeholder.jpg"),
+      src: "",
       mediaType: "image",
       album: "Jogos",
       season: "2026",
@@ -117,8 +118,10 @@ export default function AdminGaleriaPage() {
             <div className="relative aspect-square">
               {g.mediaType === "video" ? (
                 <video src={g.src} className="w-full h-full object-cover" muted />
+              ) : getValidImageSrc(g.src) ? (
+                <Image src={getValidImageSrc(g.src)!} alt={g.caption} fill sizes="300px" className="object-cover" />
               ) : (
-                <Image src={g.src} alt={g.caption} fill sizes="300px" className="object-cover" />
+                <div className="w-full h-full flex items-center justify-center text-xs text-brand-gray">Sem imagem</div>
               )}
             </div>
             <div className="p-2 text-xs">
@@ -185,14 +188,30 @@ export default function AdminGaleriaPage() {
                 type="file"
                 accept="image/*,video/*"
                 className="mt-1"
+                disabled={uploading}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) {
+                  if (!f) return;
+                  setUploading(true);
+                  setMessage(null);
+                  try {
                     const upload = await uploadAdminFile(f);
-                    setEditing({ ...editing, src: upload.url, mediaType: upload.type });
+                    setEditing((prev) => prev ? { ...prev, src: upload.url, mediaType: upload.type } : prev);
+                  } catch (error) {
+                    setMessage(error instanceof Error ? error.message : "Falha ao enviar arquivo. Verifique sua conexão e tente novamente.");
+                  } finally {
+                    setUploading(false);
                   }
                 }}
               />
+              {uploading && <p className="text-xs text-brand-gray mt-1">Enviando arquivo...</p>}
+              {editing.src && !uploading && editing.mediaType === "video" && (
+                <video src={editing.src} className="mt-2 h-24 w-auto rounded-sm object-cover" muted controls />
+              )}
+              {editing.src && !uploading && editing.mediaType !== "video" && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editing.src} alt="Preview" className="mt-2 h-24 w-auto rounded-sm object-cover" />
+              )}
             </div>
             <div>
               <Label>Legenda</Label>
@@ -237,7 +256,7 @@ export default function AdminGaleriaPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+              <Button type="submit" variant="primary" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar"}</Button>
             </div>
           </form>
         </Dialog>
