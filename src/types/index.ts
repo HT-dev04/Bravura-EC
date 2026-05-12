@@ -57,6 +57,7 @@ export interface Match {
   lineupStart: string[];
   lineupBench: string[];
   highlightPlayerId?: string;
+  highlightPhoto?: string;
   highlightQuote?: string;
   gallery: string[];
 }

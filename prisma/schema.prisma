@@ -51,6 +51,7 @@ model Match {
   lineupStart       Json
   lineupBench       Json
   highlightPlayerId String?
+  highlightPhoto    String?
   highlightQuote    String?
   gallery           Json
   createdAt         DateTime @default(now())

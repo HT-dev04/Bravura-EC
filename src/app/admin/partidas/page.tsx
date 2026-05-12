@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
-import type { Match, MatchEvent } from "@/types";
-import { formatDate } from "@/lib/utils";
+import type { Match, MatchEvent, Player } from "@/types";
+import { dateTimeLocalToIso, formatDate, formatDateTimeLocalInput } from "@/lib/utils";
 
 export default function AdminPartidasPage() {
   const [rows, setRows] = useState<Match[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [editing, setEditing] = useState<Match | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,7 +22,10 @@ export default function AdminPartidasPage() {
   useEffect(() => {
     fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data?.matches && setRows(data.matches));
+      .then((data) => {
+        if (data?.matches) setRows(data.matches);
+        if (data?.players) setPlayers(data.players);
+      });
   }, []);
 
   function handleNew() {
@@ -41,6 +45,9 @@ export default function AdminPartidasPage() {
       events: [],
       lineupStart: [],
       lineupBench: [],
+      highlightPlayerId: "",
+      highlightPhoto: "",
+      highlightQuote: "",
       gallery: [],
     });
     setOpen(true);
@@ -199,9 +206,9 @@ export default function AdminPartidasPage() {
                   required
                   type="datetime-local"
                   className="mt-1"
-                  value={editing.date.slice(0, 16)}
+                  value={formatDateTimeLocalInput(editing.date)}
                   onChange={(e) =>
-                    setEditing({ ...editing, date: new Date(e.target.value).toISOString() })
+                    setEditing({ ...editing, date: dateTimeLocalToIso(e.target.value) })
                   }
                 />
               </div>
@@ -294,6 +301,77 @@ export default function AdminPartidasPage() {
                   }
                 />
               </div>
+            </div>
+
+            <div className="rounded-sm border border-brand-gold/40 bg-brand-black-2 p-4 space-y-4">
+              <div>
+                <p className="font-display text-lg uppercase text-brand-gold">Craque do jogo</p>
+                <p className="text-xs text-brand-gray">Escolha o melhor da partida e anexe uma foto especial para aparecer nos detalhes do jogo.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Melhor da partida</Label>
+                  <Select
+                    className="mt-1"
+                    value={editing.highlightPlayerId || ""}
+                    onChange={(e) => setEditing({ ...editing, highlightPlayerId: e.target.value || undefined })}
+                  >
+                    <option value="">Sem destaque</option>
+                    {players.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.nickname || player.name} · #{player.number}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Label>Foto do craque</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="mt-1"
+                    disabled={uploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      setUploading(true);
+                      setMessage(null);
+                      try {
+                        const upload = await uploadAdminFile(file);
+                        setEditing((prev) => prev ? { ...prev, highlightPhoto: upload.url } : prev);
+                      } catch (error) {
+                        setMessage(error instanceof Error ? error.message : "Falha ao enviar a foto do craque. Verifique sua conexão e tente novamente.");
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Frase do destaque</Label>
+                <Input
+                  className="mt-1"
+                  placeholder="Ex: Decidiu o jogo com raça e personalidade."
+                  value={editing.highlightQuote || ""}
+                  onChange={(e) => setEditing({ ...editing, highlightQuote: e.target.value })}
+                />
+              </div>
+              {editing.highlightPhoto && (
+                <div className="relative h-28 w-28 overflow-hidden rounded-sm border border-brand-gold bg-brand-black">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editing.highlightPhoto} alt="Preview do craque do jogo" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setEditing({ ...editing, highlightPhoto: "" })}
+                    className="absolute right-1 top-1 rounded-sm bg-black/70 p-1 text-brand-red"
+                    aria-label="Remover foto do craque"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>

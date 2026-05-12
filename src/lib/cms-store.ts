@@ -29,6 +29,17 @@ const defaultFinance: FinanceData = {
   sponsorships: [],
 };
 
+const CMS_READ_LIMITS = {
+  news: 100,
+  gallery: 500,
+  products: 200,
+  orders: 200,
+  monthlyPayments: 1000,
+  revenues: 500,
+  expenses: 500,
+  sponsorships: 500,
+};
+
 const emptyTeamStats: TeamStatsSummary = {
   games: 0,
   wins: 0,
@@ -80,7 +91,21 @@ function fromPlayer(player: Awaited<ReturnType<typeof prisma.player.findMany>>[n
 
 function toMatch(match: Match) {
   return {
-    ...match,
+    id: match.id,
+    opponent: match.opponent,
+    opponentLogo: match.opponentLogo,
+    date: match.date,
+    location: match.location,
+    homeAway: match.homeAway,
+    competition: match.competition,
+    season: match.season,
+    status: match.status,
+    scoreHome: match.scoreHome,
+    scoreAway: match.scoreAway,
+    result: match.result,
+    highlightPlayerId: match.highlightPlayerId || null,
+    highlightPhoto: match.highlightPhoto || null,
+    highlightQuote: match.highlightQuote || null,
     events: json(match.events),
     lineupStart: json(match.lineupStart),
     lineupBench: json(match.lineupBench),
@@ -106,6 +131,7 @@ function fromMatch(match: Awaited<ReturnType<typeof prisma.match.findMany>>[numb
     lineupStart: match.lineupStart as unknown as Match["lineupStart"],
     lineupBench: match.lineupBench as unknown as Match["lineupBench"],
     highlightPlayerId: match.highlightPlayerId || undefined,
+    highlightPhoto: assetUrl((match as typeof match & { highlightPhoto?: string | null }).highlightPhoto || "") || undefined,
     highlightQuote: match.highlightQuote || undefined,
     gallery: (match.gallery as unknown as Match["gallery"]).map(assetUrl),
   };
@@ -346,20 +372,38 @@ export async function getCmsData(): Promise<CmsData> {
     revenues,
     expenses,
     sponsorships,
-  ] = await prisma.$transaction([
+  // These reads are independent; using a transaction here can exhaust pooled
+  // connections and trigger P2028 while waiting to start the transaction.
+  ] = await Promise.all([
     prisma.player.findMany({ orderBy: { number: "asc" } }),
     prisma.match.findMany({ orderBy: { date: "desc" } }),
-    prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" } }),
-    prisma.galleryPhoto.findMany({ orderBy: { id: "asc" } }),
-    prisma.product.findMany({ orderBy: { name: "asc" } }),
+    prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" }, take: CMS_READ_LIMITS.news }),
+    prisma.galleryPhoto.findMany({ orderBy: { id: "asc" }, take: CMS_READ_LIMITS.gallery }),
+    prisma.product.findMany({ orderBy: { name: "asc" }, take: CMS_READ_LIMITS.products }),
     prisma.sponsor.findMany({ orderBy: { name: "asc" } }),
-    prisma.order.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: CMS_READ_LIMITS.orders }),
     prisma.teamStats.findUnique({ where: { id: "default" } }),
     prisma.financeSettings.findUnique({ where: { id: "default" } }),
-    prisma.monthlyPayment.findMany({ orderBy: [{ month: "desc" }, { playerId: "asc" }] }),
-    prisma.revenueEntry.findMany({ orderBy: { date: "desc" } }),
-    prisma.expenseEntry.findMany({ orderBy: { date: "desc" } }),
-    prisma.sponsorshipEntry.findMany({ orderBy: { date: "desc" } }),
+    prisma.monthlyPayment.findMany({
+      orderBy: [{ month: "desc" }, { playerId: "asc" }],
+      take: CMS_READ_LIMITS.monthlyPayments,
+      select: { playerId: true, month: true, status: true, paidAt: true },
+    }),
+    prisma.revenueEntry.findMany({
+      orderBy: { date: "desc" },
+      take: CMS_READ_LIMITS.revenues,
+      select: { id: true, date: true, description: true, value: true },
+    }),
+    prisma.expenseEntry.findMany({
+      orderBy: { date: "desc" },
+      take: CMS_READ_LIMITS.expenses,
+      select: { id: true, date: true, description: true, value: true },
+    }),
+    prisma.sponsorshipEntry.findMany({
+      orderBy: { date: "desc" },
+      take: CMS_READ_LIMITS.sponsorships,
+      select: { id: true, date: true, name: true, photo: true, purpose: true, value: true },
+    }),
   ]);
 
   return {

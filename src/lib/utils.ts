@@ -38,6 +38,20 @@ export function formatTime(iso: string) {
   });
 }
 
+export function formatDateTimeLocalInput(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return offsetDate.toISOString().slice(0, 16);
+}
+
+export function dateTimeLocalToIso(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+}
+
 export function slugify(text: string) {
   return text
     .toLowerCase()

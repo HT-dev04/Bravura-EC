@@ -61,6 +61,7 @@ export default async function MatchDetailPage({
   const highlight = match.highlightPlayerId
     ? players.find((p) => p.id === match.highlightPlayerId)
     : null;
+  const highlightPhotoSrc = getValidImageSrc(match.highlightPhoto) || getValidImageSrc(highlight?.photo);
 
   return (
     <SiteShell>
@@ -181,20 +182,42 @@ export default async function MatchDetailPage({
         </section>
       )}
 
-      {highlight && (
+      {(highlight || highlightPhotoSrc || match.highlightQuote) && (
         <section className="container-x py-10">
-          <div className="bg-brand-black-2 border border-brand-gold/40 rounded-sm p-8 flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-28 h-28 shrink-0 rounded-full overflow-hidden bg-brand-black">
-              {getValidImageSrc(highlight.photo) && (
-                <Image src={getValidImageSrc(highlight.photo)!} alt={highlight.name} fill sizes="112px" className="object-cover" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-brand-gold uppercase text-xs tracking-widest font-semibold mb-1">
-                Destaque do jogo
-              </p>
-              <h3 className="break-words font-display text-3xl uppercase">{highlight.nickname}</h3>
-              <p className="break-words text-brand-gray italic mt-2">&ldquo;{match.highlightQuote}&rdquo;</p>
+          <div className="relative overflow-hidden rounded-sm border border-brand-gold/60 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.22),transparent_34%),linear-gradient(135deg,#141414,#0a0a0a)] p-1 shadow-[0_0_40px_rgba(212,175,55,0.12)]">
+            <div className="rounded-sm border border-brand-gold/20 p-5 sm:p-8">
+              <div className="flex flex-col items-center gap-6 md:flex-row md:items-stretch">
+                <div className="relative w-full max-w-xs shrink-0 overflow-hidden rounded-sm border-2 border-brand-gold bg-brand-black aspect-[4/5]">
+                  {highlightPhotoSrc ? (
+                    <Image src={highlightPhotoSrc} alt={highlight?.name || "Craque do jogo"} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-center font-display text-4xl uppercase text-brand-gold/50">
+                      Craque
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-black via-brand-black/70 to-transparent p-4 pt-16">
+                    <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-brand-gold">Craque do jogo</p>
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1 self-center text-center md:text-left">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-gold/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">
+                    <Trophy className="h-4 w-4" /> Melhor em campo
+                  </div>
+                  <h2 className="break-words font-display text-4xl uppercase leading-none text-white md:text-6xl">
+                    {highlight?.nickname || highlight?.name || "Destaque da partida"}
+                  </h2>
+                  {highlight && (
+                    <p className="mt-2 break-words text-sm uppercase tracking-widest text-brand-gray">
+                      #{highlight.number} · {highlight.position}
+                    </p>
+                  )}
+                  {match.highlightQuote && (
+                    <p className="mt-6 max-w-2xl break-words text-lg italic leading-relaxed text-brand-white/80">
+                      &ldquo;{match.highlightQuote}&rdquo;
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>
