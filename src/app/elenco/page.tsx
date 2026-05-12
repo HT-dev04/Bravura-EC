@@ -42,10 +42,10 @@ export default function ElencoPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Elenco
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase mb-2">
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase mb-2">
             Os atletas do Bravura
           </h1>
-          <p className="text-brand-gray">{roster.length} jogadores na temporada 2026.</p>
+          <p className="break-words text-brand-gray">{roster.length} jogadores na temporada 2026.</p>
         </div>
       </section>
 
@@ -83,7 +83,7 @@ export default function ElencoPage() {
         ) : filtered.length === 0 ? (
           <p className="text-brand-gray text-center py-14">Nenhum jogador cadastrado.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {filtered.map((p) => (
               <PlayerCard key={p.id} player={p} />
             ))}

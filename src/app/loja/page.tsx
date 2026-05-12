@@ -39,7 +39,7 @@ export default async function LojaPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Loja Oficial
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase">Produtos Bravura</h1>
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase">Produtos Bravura</h1>
         </div>
       </section>
 
@@ -58,8 +58,8 @@ function ProductRow({ title, list }: { title: string; list: Product[] }) {
   if (list.length === 0) return null;
   return (
     <section className="container-x py-8">
-      <h2 className="font-display text-2xl md:text-3xl uppercase mb-5">{title}</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <h2 className="break-words font-display text-2xl md:text-3xl uppercase mb-5">{title}</h2>
+      <div className="grid grid-cols-1 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {list.map((p) => (
           <ProductCard key={p.id} product={p} />
         ))}

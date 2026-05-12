@@ -6,6 +6,7 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { NewsCard } from "@/components/site/NewsCard";
 import { Badge } from "@/components/ui/badge";
 import { getCmsData } from "@/lib/cms-store";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { formatDateLong } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,9 @@ export default async function NewsDetailPage({
   return (
     <SiteShell>
       <section className="relative w-full aspect-[21/9] md:aspect-[21/7] bg-brand-black">
-        <Image src={item.cover} alt={item.title} fill sizes="100vw" className="object-cover opacity-60" priority />
+        {getValidImageSrc(item.cover) && (
+          <Image src={getValidImageSrc(item.cover)!} alt={item.title} fill sizes="100vw" className="object-cover opacity-60" priority />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/60 to-transparent" />
         <div className="absolute inset-0 flex items-end">
           <div className="container-x pb-10">

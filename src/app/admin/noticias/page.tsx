@@ -8,7 +8,6 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import type { NewsItem } from "@/types";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
 import { formatDate, slugify } from "@/lib/utils";
 
 export default function AdminNoticiasPage() {
@@ -16,6 +15,7 @@ export default function AdminNoticiasPage() {
   const [editing, setEditing] = useState<NewsItem | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function AdminNoticiasPage() {
       category: "Jogos",
       author: "Redação Bravura",
       publishedAt: new Date().toISOString(),
-      cover: assetUrl("/gallery/artes-01.jpg"),
+      cover: "",
       content: "",
     });
     setOpen(true);
@@ -153,15 +153,29 @@ export default function AdminNoticiasPage() {
               <Label>Capa</Label>
               <Input
                 type="file"
+                accept="image/*"
                 className="mt-1"
+                disabled={uploading}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) {
+                  if (!f) return;
+                  setUploading(true);
+                  setMessage(null);
+                  try {
                     const upload = await uploadAdminFile(f);
-                    setEditing({ ...editing, cover: upload.url });
+                    setEditing((prev) => prev ? { ...prev, cover: upload.url } : prev);
+                  } catch {
+                    setMessage("Falha ao enviar capa. Verifique sua conexão e tente novamente.");
+                  } finally {
+                    setUploading(false);
                   }
                 }}
               />
+              {uploading && <p className="text-xs text-brand-gray mt-1">Enviando capa...</p>}
+              {editing.cover && !uploading && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editing.cover} alt="Preview" className="mt-2 h-24 w-auto rounded-sm object-cover" />
+              )}
             </div>
             <div>
               <Label>Resumo</Label>

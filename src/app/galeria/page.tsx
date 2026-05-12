@@ -6,6 +6,7 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { Lightbox } from "@/components/site/Lightbox";
 import { Select } from "@/components/ui/input";
 import type { GalleryAlbum, GalleryPhoto } from "@/types";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { cn } from "@/lib/utils";
 
 const albums: Array<GalleryAlbum | "Todos"> = ["Todos", "Jogos", "Elenco", "Bastidores", "Treinos", "Artes"];
@@ -41,7 +42,7 @@ export default function GaleriaPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Galeria
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase">Momentos em imagens</h1>
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase">Momentos em imagens</h1>
         </div>
       </section>
 
@@ -78,24 +79,29 @@ export default function GaleriaPage() {
         ) : filtered.length === 0 ? (
           <p className="text-brand-gray text-center py-14">Nenhuma mídia cadastrada.</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filtered.map((g, i) => (
-            <button
-              key={g.id}
-              onClick={() => setOpenIdx(i)}
-              className="relative aspect-square bg-brand-black rounded-sm overflow-hidden group"
-            >
-              {g.mediaType === "video" ? (
-                <video src={g.src} className="w-full h-full object-cover" controls />
-              ) : (
-                <Image src={g.src} alt={g.caption} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <p className="absolute bottom-2 left-3 right-3 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                {g.caption}
-              </p>
-            </button>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filtered.map((g, i) => {
+              const mediaSrc = getValidImageSrc(g.src);
+              const isVideo = g.mediaType === "video";
+              if (!mediaSrc && !isVideo) return null;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => setOpenIdx(i)}
+                  className="relative aspect-square bg-brand-black rounded-sm overflow-hidden group"
+                >
+                  {isVideo ? (
+                    <video src={g.src} className="w-full h-full object-cover" controls />
+                  ) : (
+                    <Image src={mediaSrc!} alt={g.caption} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <p className="absolute bottom-2 left-3 right-3 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                    {g.caption}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         )}
       </section>

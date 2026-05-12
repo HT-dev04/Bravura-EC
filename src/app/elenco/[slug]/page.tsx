@@ -6,6 +6,7 @@ import { StatCard } from "@/components/site/StatCard";
 import { getCmsData } from "@/lib/cms-store";
 import { PlayerGoalsChart } from "./PlayerGoalsChart";
 import { Badge } from "@/components/ui/badge";
+import { getValidImageSrc } from "@/lib/image-utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -48,20 +49,22 @@ export default async function PlayerDetailPage({
   return (
     <SiteShell>
       <section className="diag-section py-14">
-        <div className="container-x grid md:grid-cols-[360px_1fr] gap-10 items-start">
+        <div className="container-x grid md:grid-cols-[minmax(0,360px)_minmax(0,1fr)] gap-10 items-start">
           <div className="relative aspect-[3/4] rounded-sm overflow-hidden bg-brand-black-2 border border-brand-border">
-            <Image src={player.photo} alt={player.name} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover object-top" />
+            {getValidImageSrc(player.photo) && (
+              <Image src={getValidImageSrc(player.photo)!} alt={player.name} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover object-top" />
+            )}
           </div>
-          <div>
+          <div className="relative min-w-0">
             <Badge variant="gold">{player.position}</Badge>
-            <h1 className="font-display text-5xl md:text-7xl uppercase leading-none mt-3">
+            <h1 className="break-words font-display text-4xl sm:text-5xl md:text-7xl uppercase leading-none mt-3">
               {player.nickname}
             </h1>
-            <p className="text-brand-gray text-xl mt-1">{player.name}</p>
-            <p className="font-display text-[140px] leading-none text-brand-red/30 font-bold absolute">
+            <p className="break-words text-brand-gray text-xl mt-1">{player.name}</p>
+            <p className="pointer-events-none absolute right-0 top-8 max-w-full break-words text-right font-display text-7xl sm:text-[140px] leading-none text-brand-red/30 font-bold">
               {player.number}
             </p>
-            <div className="mt-6 max-w-xl text-brand-white/80">{player.bio}</div>
+            <div className="relative z-10 mt-6 max-w-xl break-words text-brand-white/80">{player.bio}</div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 max-w-xl">
               <InfoRow label="Pé preferido" value={player.preferredFoot} />
@@ -75,7 +78,7 @@ export default async function PlayerDetailPage({
 
       <section className="container-x py-14">
         <h2 className="font-display text-2xl md:text-3xl uppercase mb-5">Estatísticas da temporada</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Jogos" value={player.stats.games} />
           <StatCard label="Gols" value={player.stats.goals} accent="red" />
           <StatCard label="Assistências" value={player.stats.assists} accent="gold" />
@@ -93,10 +96,10 @@ export default async function PlayerDetailPage({
               <p className="p-4 text-brand-gray text-sm">Sem jogos registrados.</p>
             )}
             {lastGames.map((m) => (
-              <div key={m.id} className="p-4 flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-semibold">Bravura × {m.opponent}</p>
-                  <p className="text-xs text-brand-gray">{m.competition}</p>
+              <div key={m.id} className="p-4 flex min-w-0 items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="break-words font-semibold">Bravura × {m.opponent}</p>
+                  <p className="break-words text-xs text-brand-gray">{m.competition}</p>
                 </div>
                 <p className="font-display text-xl">
                   {m.scoreHome} × {m.scoreAway}
@@ -119,10 +122,10 @@ export default async function PlayerDetailPage({
           {player.history.map((h, i) => (
             <li
               key={i}
-              className="bg-brand-black-2 border border-brand-border rounded-sm p-4 flex justify-between text-sm"
+              className="bg-brand-black-2 border border-brand-border rounded-sm p-4 flex min-w-0 justify-between gap-4 text-sm"
             >
               <span className="text-brand-gray">{h.year}</span>
-              <span className="font-semibold">{h.club}</span>
+              <span className="min-w-0 break-words text-right font-semibold">{h.club}</span>
             </li>
           ))}
         </ul>

@@ -15,7 +15,7 @@ import type { TeamStatsSummary } from "@/types";
 export function StatsCharts({ teamStats }: { teamStats: TeamStatsSummary }) {
   return (
     <>
-      <div className="bg-brand-black-2 border border-brand-border rounded-sm p-5 h-[320px]">
+      <div className="min-w-0 bg-brand-black-2 border border-brand-border rounded-sm p-4 sm:p-5 h-[320px]">
         <h3 className="font-display uppercase text-sm tracking-wider text-brand-gold mb-3">
           Gols por mês
         </h3>
@@ -32,7 +32,7 @@ export function StatsCharts({ teamStats }: { teamStats: TeamStatsSummary }) {
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-brand-black-2 border border-brand-border rounded-sm p-5 h-[320px]">
+      <div className="min-w-0 bg-brand-black-2 border border-brand-border rounded-sm p-4 sm:p-5 h-[320px]">
         <h3 className="font-display uppercase text-sm tracking-wider text-brand-gold mb-3">
           Aproveitamento por competição
         </h3>

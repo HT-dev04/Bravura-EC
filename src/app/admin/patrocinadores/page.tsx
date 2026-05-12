@@ -6,14 +6,14 @@ import { DataTable } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
-import { saveAdminCollection } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
+import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
 import type { Sponsor } from "@/types";
 
 export default function AdminPatrocinadoresPage() {
   const [rows, setRows] = useState<Sponsor[]>([]);
   const [editing, setEditing] = useState<Sponsor | null>(null);
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function AdminPatrocinadoresPage() {
   }
 
   function handleNew() {
-    setEditing({ id: `s${Date.now()}`, name: "", logo: assetUrl("/sponsors/placeholder.svg"), tier: "Bronze", website: "" });
+    setEditing({ id: `s${Date.now()}`, name: "", logo: "", tier: "Bronze", website: "" });
     setOpen(true);
   }
 
@@ -132,12 +132,29 @@ export default function AdminPatrocinadoresPage() {
               <Label>Logo</Label>
               <Input
                 type="file"
+                accept="image/*"
                 className="mt-1"
-                onChange={(e) => {
+                disabled={uploading}
+                onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) setEditing({ ...editing, logo: URL.createObjectURL(f) });
+                  if (!f) return;
+                  setUploading(true);
+                  setMessage(null);
+                  try {
+                    const upload = await uploadAdminFile(f);
+                    setEditing((prev) => prev ? { ...prev, logo: upload.url } : prev);
+                  } catch {
+                    setMessage("Falha ao enviar logo. Verifique sua conexão e tente novamente.");
+                  } finally {
+                    setUploading(false);
+                  }
                 }}
               />
+              {uploading && <p className="text-xs text-brand-gray mt-1">Enviando logo...</p>}
+              {editing.logo && !uploading && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editing.logo} alt="Preview" className="mt-2 h-16 w-auto object-contain" />
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button
@@ -150,7 +167,7 @@ export default function AdminPatrocinadoresPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary">Salvar</Button>
+              <Button type="submit" variant="primary" disabled={uploading}>Salvar</Button>
             </div>
           </form>
         </Dialog>

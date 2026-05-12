@@ -6,8 +6,7 @@ import { DataTable } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { saveAdminCollection } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
+import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
 import type { Product, ProductCategory } from "@/types";
 import { formatCurrency, slugify } from "@/lib/utils";
 
@@ -15,6 +14,8 @@ export default function AdminProdutosPage() {
   const [rows, setRows] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/cms", { cache: "no-store" })
@@ -34,7 +35,7 @@ export default function AdminProdutosPage() {
       name: "",
       category: "uniformes-jogo",
       price: 0,
-      images: [assetUrl("/products/placeholder.jpg")],
+      images: [],
       description: "",
       sizes: ["P", "M", "G", "GG"],
       stock: 0,
@@ -116,8 +117,9 @@ export default function AdminProdutosPage() {
                   type="number"
                   step="0.01"
                   className="mt-1"
-                  value={editing.price}
-                  onChange={(e) => setEditing({ ...editing, price: +e.target.value })}
+                  placeholder="0"
+                  value={editing.price || ""}
+                  onChange={(e) => setEditing({ ...editing, price: e.target.value === "" ? 0 : +e.target.value })}
                 />
               </div>
               <div>
@@ -126,8 +128,9 @@ export default function AdminProdutosPage() {
                   required
                   type="number"
                   className="mt-1"
-                  value={editing.stock}
-                  onChange={(e) => setEditing({ ...editing, stock: +e.target.value })}
+                  placeholder="0"
+                  value={editing.stock || ""}
+                  onChange={(e) => setEditing({ ...editing, stock: e.target.value === "" ? 0 : +e.target.value })}
                 />
               </div>
               <div>
@@ -159,12 +162,30 @@ export default function AdminProdutosPage() {
               <Label>Imagem principal</Label>
               <Input
                 type="file"
+                accept="image/*"
                 className="mt-1"
-                onChange={(e) => {
+                disabled={uploading}
+                onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) setEditing({ ...editing, images: [URL.createObjectURL(f)] });
+                  if (!f) return;
+                  setUploading(true);
+                  setUploadError(null);
+                  try {
+                    const upload = await uploadAdminFile(f);
+                    setEditing((prev) => prev ? { ...prev, images: [upload.url] } : prev);
+                  } catch {
+                    setUploadError("Falha ao enviar imagem. Verifique sua conexão e tente novamente.");
+                  } finally {
+                    setUploading(false);
+                  }
                 }}
               />
+              {uploading && <p className="text-xs text-brand-gray mt-1">Enviando imagem...</p>}
+              {uploadError && <p className="text-xs text-brand-red mt-1">{uploadError}</p>}
+              {editing.images[0] && !uploading && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editing.images[0]} alt="Preview" className="mt-2 h-24 w-auto rounded-sm object-cover" />
+              )}
             </div>
             <div className="flex items-center gap-4 text-sm">
               <label className="flex items-center gap-2">

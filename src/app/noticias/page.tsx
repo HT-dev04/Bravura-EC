@@ -39,13 +39,13 @@ export default function NoticiasPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Notícias
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase">Direto do Bravura</h1>
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase">Direto do Bravura</h1>
         </div>
       </section>
 
       <section className="container-x py-10">
         <div className="grid md:grid-cols-[1fr_auto] gap-4 mb-8">
-          <div className="relative">
+          <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-gray" />
             <Input
               placeholder="Buscar notícias"

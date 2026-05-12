@@ -6,6 +6,7 @@ import { Trash2, Minus, Plus } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart-store";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { formatCurrency } from "@/lib/utils";
 
 export default function CarrinhoPage() {
@@ -29,15 +30,17 @@ export default function CarrinhoPage() {
               {items.map((it) => (
                 <div
                   key={`${it.productId}-${it.size}`}
-                  className="bg-brand-black-2 border border-brand-border rounded-sm p-4 flex gap-4"
+                  className="bg-brand-black-2 border border-brand-border rounded-sm p-4 flex min-w-0 flex-col gap-4 min-[430px]:flex-row"
                 >
                   <div className="relative w-24 h-24 bg-brand-black rounded-sm overflow-hidden flex-shrink-0">
-                    <Image src={it.image} alt={it.name} fill sizes="96px" className="object-cover" />
+                    {getValidImageSrc(it.image) && (
+                      <Image src={getValidImageSrc(it.image)!} alt={it.name} fill sizes="96px" className="object-cover" />
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between gap-4">
-                      <div>
-                        <Link href={`/loja/${it.slug}`} className="font-display uppercase text-lg">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 justify-between gap-4">
+                      <div className="min-w-0">
+                        <Link href={`/loja/${it.slug}`} className="break-words font-display uppercase text-lg">
                           {it.name}
                         </Link>
                         <p className="text-xs text-brand-gray">Tamanho: {it.size}</p>
@@ -49,7 +52,7 @@ export default function CarrinhoPage() {
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="flex items-center justify-between mt-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
                       <div className="flex items-center border border-brand-border rounded-sm">
                         <button
                           onClick={() => updateQty(it.productId, it.size, it.quantity - 1)}
@@ -76,15 +79,15 @@ export default function CarrinhoPage() {
 
             <aside className="bg-brand-black-2 border border-brand-border rounded-sm p-6 h-fit sticky top-20">
               <h2 className="font-display uppercase text-lg mb-4">Resumo</h2>
-              <div className="flex justify-between text-sm mb-2">
+              <div className="flex justify-between gap-4 text-sm mb-2">
                 <span className="text-brand-gray">Subtotal</span>
                 <span>{formatCurrency(subtotal())}</span>
               </div>
-              <div className="flex justify-between text-sm mb-2">
+              <div className="flex justify-between gap-4 text-sm mb-2">
                 <span className="text-brand-gray">Frete</span>
-                <span className="text-brand-gold">Calculado no checkout</span>
+                <span className="break-words text-right text-brand-gold">Calculado no checkout</span>
               </div>
-              <div className="flex justify-between font-display text-2xl border-t border-brand-border pt-4 mt-4">
+              <div className="flex justify-between gap-4 font-display text-2xl border-t border-brand-border pt-4 mt-4">
                 <span>Total</span>
                 <span className="text-brand-gold">{formatCurrency(subtotal())}</span>
               </div>

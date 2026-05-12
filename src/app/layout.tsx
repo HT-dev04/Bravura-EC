@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
 import { assetUrl, bravuraLogo } from "@/lib/asset-url";
 import { siteUrl } from "@/lib/site-url";
@@ -57,12 +57,17 @@ export const metadata: Metadata = {
   icons: { icon: bravuraLogo },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${oswald.variable} ${inter.variable}`}>
-      <body className="min-h-screen flex flex-col bg-brand-black text-brand-white">
+      <body className="min-h-screen flex flex-col overflow-x-hidden bg-brand-black text-brand-white">
         {children}
       </body>
     </html>

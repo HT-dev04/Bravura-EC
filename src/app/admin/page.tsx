@@ -3,6 +3,9 @@ import { AdminRevenueChart } from "./AdminRevenueChart";
 import { getCmsData } from "@/lib/cms-store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminDashboard() {
   const { players, matches, orders } = await getCmsData();
   const upcoming = matches.filter((m) => m.status === "agendada");

@@ -39,7 +39,7 @@ export default function JogosPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Jogos
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase">Partidas do Bravura</h1>
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase">Partidas do Bravura</h1>
         </div>
       </section>
 
@@ -71,13 +71,13 @@ export default function JogosPage() {
             <label className="text-[10px] uppercase tracking-wider text-brand-gray mb-1 block">
               Resultado
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(["todos", "V", "E", "D"] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setResult(r)}
                   className={cn(
-                    "flex-1 px-3 py-2 text-xs uppercase font-semibold border rounded-sm",
+                    "min-w-16 flex-1 px-3 py-2 text-xs uppercase font-semibold border rounded-sm",
                     result === r
                       ? "bg-brand-red border-brand-red"
                       : "border-brand-border text-brand-white/80"

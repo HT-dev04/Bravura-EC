@@ -61,18 +61,18 @@ export default async function PatrocinadoresPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Parceiros
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase">Patrocinadores do Bravura</h1>
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase">Patrocinadores do Bravura</h1>
         </div>
       </section>
 
       <section className="container-x py-12">
-        <h2 className="font-display text-3xl uppercase mb-6">Quem apoia o clube</h2>
+        <h2 className="break-words font-display text-3xl uppercase mb-6">Quem apoia o clube</h2>
         <SponsorGrid list={sponsors} />
       </section>
 
       <section className="diag-section py-14">
         <div className="container-x">
-          <h2 className="font-display text-3xl uppercase mb-8 text-center">
+          <h2 className="break-words font-display text-3xl uppercase mb-8 text-center">
             Por que patrocinar o Bravura
           </h2>
           <div className="grid md:grid-cols-3 gap-5">
@@ -84,12 +84,12 @@ export default async function PatrocinadoresPage() {
       </section>
 
       <section className="container-x py-14">
-        <h2 className="font-display text-3xl uppercase mb-8 text-center">Planos de parceria</h2>
+        <h2 className="break-words font-display text-3xl uppercase mb-8 text-center">Planos de parceria</h2>
         <div className="grid md:grid-cols-3 gap-5">
           {plans.map((plan) => (
             <div
               key={plan.tier}
-              className="bg-brand-black-2 border border-brand-border hover:border-brand-gold rounded-sm p-6 transition-colors"
+              className="min-w-0 bg-brand-black-2 border border-brand-border hover:border-brand-gold rounded-sm p-6 transition-colors"
             >
               <div
                 className="inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-sm mb-4"
@@ -97,12 +97,12 @@ export default async function PatrocinadoresPage() {
               >
                 {plan.tier}
               </div>
-              <p className="font-display text-3xl mb-4">{plan.price}</p>
+              <p className="break-words font-display text-3xl mb-4">{plan.price}</p>
               <ul className="space-y-2 text-sm text-brand-white/80 mb-6">
                 {plan.perks.map((perk) => (
                   <li key={perk} className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-brand-red mt-0.5 flex-shrink-0" />
-                    <span>{perk}</span>
+                    <span className="min-w-0 break-words">{perk}</span>
                   </li>
                 ))}
               </ul>
@@ -127,10 +127,10 @@ function Benefit({
   text: string;
 }) {
   return (
-    <div className="bg-brand-black-2 border border-brand-border rounded-sm p-6 text-center">
+    <div className="min-w-0 bg-brand-black-2 border border-brand-border rounded-sm p-6 text-center">
       <Icon className="w-8 h-8 mx-auto text-brand-red mb-3" />
-      <h3 className="font-display uppercase text-lg mb-2">{title}</h3>
-      <p className="text-sm text-brand-gray">{text}</p>
+      <h3 className="break-words font-display uppercase text-lg mb-2">{title}</h3>
+      <p className="break-words text-sm text-brand-gray">{text}</p>
     </div>
   );
 }

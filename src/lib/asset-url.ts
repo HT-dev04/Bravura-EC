@@ -9,4 +9,4 @@ export function assetUrl(path: string) {
   return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
 }
 
-export const bravuraLogo = assetUrl("/bravura-logo.svg");
+export const bravuraLogo = "/bravura-logo.svg";

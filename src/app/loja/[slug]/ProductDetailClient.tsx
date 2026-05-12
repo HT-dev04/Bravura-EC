@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ShoppingBag, Check } from "lucide-react";
 import type { Product } from "@/types";
 import { useCart } from "@/lib/cart-store";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
   const [size, setSize] = useState<string>(product.sizes[0]);
   const [added, setAdded] = useState(false);
   const { add, open } = useCart();
+  const activeImageSrc = getValidImageSrc(product.images[activeImg]);
 
   function handleAdd() {
     add({
@@ -32,60 +34,67 @@ export function ProductDetailClient({ product }: { product: Product }) {
 
   return (
     <section className="container-x py-12 grid md:grid-cols-2 gap-10">
-      <div>
+      <div className="min-w-0">
         <div className="relative aspect-square bg-brand-black-2 border border-brand-border rounded-sm overflow-hidden">
-          <Image
-            src={product.images[activeImg]}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 600px"
-            className="object-cover"
-            priority
-          />
+          {activeImageSrc && (
+            <Image
+              src={activeImageSrc}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 600px"
+              className="object-cover"
+              priority
+            />
+          )}
         </div>
         {product.images.length > 1 && (
-          <div className="grid grid-cols-4 gap-2 mt-3">
-            {product.images.map((img, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveImg(i)}
-                className={cn(
-                  "relative aspect-square bg-brand-black-2 border rounded-sm overflow-hidden",
-                  i === activeImg ? "border-brand-red" : "border-brand-border"
-                )}
-              >
-                <Image src={img} alt={`${product.name} ${i + 1}`} fill sizes="150px" className="object-cover" />
-              </button>
-            ))}
+          <div className="grid grid-cols-3 min-[430px]:grid-cols-4 gap-2 mt-3">
+            {product.images.map((img, i) => {
+              const thumbSrc = getValidImageSrc(img);
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveImg(i)}
+                  className={cn(
+                    "relative aspect-square bg-brand-black-2 border rounded-sm overflow-hidden",
+                    i === activeImg ? "border-brand-red" : "border-brand-border"
+                  )}
+                >
+                  {thumbSrc && (
+                    <Image src={thumbSrc} alt={`${product.name} ${i + 1}`} fill sizes="150px" className="object-cover" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div>
+      <div className="min-w-0">
         <div className="flex items-center gap-2 mb-3">
           {product.isNew && <Badge variant="gold">Novo</Badge>}
           {product.bestseller && <Badge variant="red">Mais vendido</Badge>}
         </div>
-        <h1 className="font-display text-3xl md:text-5xl uppercase leading-none mb-4">
+        <h1 className="break-words font-display text-3xl md:text-5xl uppercase leading-none mb-4">
           {product.name}
         </h1>
-        <div className="flex items-baseline gap-3 mb-6">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-3 mb-6">
           {product.oldPrice && (
             <span className="text-brand-gray line-through text-lg">
               {formatCurrency(product.oldPrice)}
             </span>
           )}
-          <span className="font-display text-4xl text-brand-gold">
+          <span className="break-words font-display text-3xl sm:text-4xl text-brand-gold">
             {formatCurrency(product.price)}
           </span>
         </div>
-        <p className="text-brand-white/80 leading-relaxed mb-6">{product.description}</p>
+        <p className="break-words text-brand-white/80 leading-relaxed mb-6">{product.description}</p>
 
         <div className="mb-4">
           <p className="text-[10px] uppercase tracking-wider text-brand-gray mb-2">
             Tamanho
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {product.sizes.map((s) => (
               <button
                 key={s}

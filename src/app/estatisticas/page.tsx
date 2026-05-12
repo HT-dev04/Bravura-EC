@@ -7,6 +7,7 @@ import { getCmsData } from "@/lib/cms-store";
 import { getPlayerRankings } from "@/lib/cms-stats";
 import { StatsCharts } from "./StatsCharts";
 import type { Player } from "@/types";
+import { getValidImageSrc } from "@/lib/image-utils";
 
 export const metadata: Metadata = {
   title: "Estatísticas",
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function EstatisticasPage() {
   const { players, teamStats } = await getCmsData();
@@ -28,12 +30,12 @@ export default async function EstatisticasPage() {
           <p className="text-brand-gold uppercase tracking-[0.3em] text-[10px] font-semibold mb-2">
             Estatísticas
           </p>
-          <h1 className="font-display text-4xl md:text-6xl uppercase">Os números do Bravura</h1>
+          <h1 className="break-words font-display text-4xl md:text-6xl uppercase">Os números do Bravura</h1>
         </div>
       </section>
 
       <section className="container-x py-10">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Jogos" value={teamStats.games} />
           <StatCard label="Vitórias" value={teamStats.wins} accent="red" />
           <StatCard label="Empates" value={teamStats.draws} accent="gold" />
@@ -41,7 +43,7 @@ export default async function EstatisticasPage() {
           <StatCard label="Gols pró" value={teamStats.goalsFor} accent="red" />
           <StatCard label="Gols contra" value={teamStats.goalsAgainst} />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+        <div className="grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-4 gap-3 mt-3">
           <StatCard label="Aproveitamento" value={`${teamStats.winRate}%`} accent="gold" />
           <StatCard label="Saldo" value={teamStats.goalsFor - teamStats.goalsAgainst} accent="red" />
           <StatCard
@@ -86,12 +88,12 @@ function Ranking({
       </div>
       <ul className="divide-y divide-brand-border">
         {items.map((p, i) => (
-          <li key={p.id} className="px-4 py-3 flex items-center gap-3">
-            <span className="font-display text-brand-gray w-5">{i + 1}</span>
-            <div className="relative w-9 h-9 rounded-full bg-brand-black overflow-hidden">
-              <Image src={p.photo} alt={p.name} fill sizes="36px" className="object-cover" />
+          <li key={p.id} className="px-4 py-3 flex min-w-0 items-center gap-3">
+            <span className="w-5 shrink-0 font-display text-brand-gray">{i + 1}</span>
+            <div className="relative w-9 h-9 shrink-0 rounded-full bg-brand-black overflow-hidden">
+              {getValidImageSrc(p.photo) && <Image src={getValidImageSrc(p.photo)!} alt={p.name} fill sizes="36px" className="object-cover" />}
             </div>
-            <Link href={`/elenco/${p.slug}`} className="flex-1 text-sm font-semibold hover:text-brand-gold">
+            <Link href={`/elenco/${p.slug}`} className="min-w-0 flex-1 break-words text-sm font-semibold hover:text-brand-gold">
               {p.nickname}
             </Link>
             <span className="font-display text-xl font-bold text-brand-red">{getValue(p)}</span>

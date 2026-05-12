@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, Trash2, Plus, Minus } from "lucide-react";
 import { useCart } from "@/lib/cart-store";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -35,14 +36,16 @@ export function CartDrawer() {
           {items.map((it) => (
             <div
               key={`${it.productId}-${it.size}`}
-              className="flex gap-3 border-b border-brand-border pb-4"
+              className="flex min-w-0 gap-3 border-b border-brand-border pb-4"
             >
               <div className="relative w-20 h-20 flex-shrink-0 bg-brand-black rounded-sm overflow-hidden">
-                <Image src={it.image} alt={it.name} fill sizes="80px" className="object-cover" />
+                {getValidImageSrc(it.image) && (
+                  <Image src={getValidImageSrc(it.image)!} alt={it.name} fill sizes="80px" className="object-cover" />
+                )}
               </div>
-              <div className="flex-1 flex flex-col">
-                <div className="flex justify-between gap-2">
-                  <span className="text-sm font-semibold leading-tight">{it.name}</span>
+              <div className="min-w-0 flex-1 flex flex-col">
+                <div className="flex min-w-0 justify-between gap-2">
+                  <span className="min-w-0 break-words text-sm font-semibold leading-tight">{it.name}</span>
                   <button
                     onClick={() => remove(it.productId, it.size)}
                     className="text-brand-gray hover:text-brand-red"
@@ -51,7 +54,7 @@ export function CartDrawer() {
                   </button>
                 </div>
                 <span className="text-xs text-brand-gray">Tamanho {it.size}</span>
-                <div className="mt-auto flex items-center justify-between">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center border border-brand-border rounded-sm">
                     <button
                       onClick={() => updateQty(it.productId, it.size, it.quantity - 1)}

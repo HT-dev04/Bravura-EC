@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect } from "react";
+import { getValidImageSrc } from "@/lib/image-utils";
 
 interface LightboxProps {
   images: { src: string; caption?: string }[];
@@ -28,7 +29,8 @@ export function Lightbox({ images, index, onClose, onPrev, onNext }: LightboxPro
   }, [onClose, onPrev, onNext]);
 
   const current = images[index];
-  if (!current) return null;
+  const imageSrc = getValidImageSrc(current?.src);
+  if (!current || !imageSrc) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center">
@@ -55,7 +57,7 @@ export function Lightbox({ images, index, onClose, onPrev, onNext }: LightboxPro
       </button>
       <div className="relative w-full max-w-5xl h-[80vh] mx-4">
         <Image
-          src={current.src}
+          src={imageSrc}
           alt={current.caption || ""}
           fill
           sizes="100vw"

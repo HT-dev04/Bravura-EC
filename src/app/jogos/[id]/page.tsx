@@ -5,6 +5,7 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { Badge } from "@/components/ui/badge";
 import { getCmsData } from "@/lib/cms-store";
 import { bravuraLogo } from "@/lib/asset-url";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { formatDateLong, formatTime } from "@/lib/utils";
 import { Shirt, Calendar, MapPin, Trophy } from "lucide-react";
 
@@ -65,7 +66,7 @@ export default async function MatchDetailPage({
     <SiteShell>
       <section className="diag-section py-14">
         <div className="container-x">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             <Badge variant="gold">{match.competition}</Badge>
             {match.status === "encerrada" && match.result && (
               <Badge variant="red">{match.result === "V" ? "Vitória" : match.result === "E" ? "Empate" : "Derrota"}</Badge>
@@ -77,7 +78,7 @@ export default async function MatchDetailPage({
             <TeamBlock logo={bravuraLogo} name="Bravura EC" />
             <div className="text-center">
               {match.status === "encerrada" ? (
-                <div className="font-display text-6xl md:text-8xl font-bold">
+                <div className="font-display text-5xl sm:text-6xl md:text-8xl font-bold">
                   {match.scoreHome} <span className="text-brand-red">×</span> {match.scoreAway}
                 </div>
               ) : (
@@ -88,18 +89,18 @@ export default async function MatchDetailPage({
             <TeamBlock logo={match.opponentLogo} name={match.opponent} />
           </div>
 
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-brand-gray mt-6">
-            <span className="flex items-center gap-2">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-brand-gray mt-6">
+            <span className="flex min-w-0 items-center gap-2">
               <Calendar className="w-4 h-4 text-brand-red" />
               {formatDateLong(match.date)}
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex min-w-0 items-center gap-2">
               <MapPin className="w-4 h-4 text-brand-red" />
-              {match.location}
+              <span className="break-words">{match.location}</span>
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex min-w-0 items-center gap-2">
               <Trophy className="w-4 h-4 text-brand-red" />
-              {match.competition}
+              <span className="break-words">{match.competition}</span>
             </span>
           </div>
         </div>
@@ -112,14 +113,14 @@ export default async function MatchDetailPage({
             {match.events.map((ev, i) => (
               <li key={i} className="pl-6 relative">
                 <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-brand-red border-4 border-brand-black" />
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-3">
                   <span className="font-display text-xl text-brand-gold">{ev.minute}&apos;</span>
                   <Badge variant={ev.team === "bravura" ? "red" : "gray"}>
                     {ev.team === "bravura" ? "Bravura" : match.opponent}
                   </Badge>
-                  <span className="text-sm">{eventLabels[ev.type]}</span>
+                  <span className="break-words text-sm">{eventLabels[ev.type]}</span>
                 </div>
-                <p className="text-sm text-brand-gray mt-1">{ev.playerName}</p>
+                <p className="break-words text-sm text-brand-gray mt-1">{ev.playerName}</p>
               </li>
             ))}
           </ol>
@@ -136,11 +137,11 @@ export default async function MatchDetailPage({
               {starters.map((p) => (
                 <li
                   key={p.id}
-                  className="bg-brand-black-2 border border-brand-border rounded-sm px-4 py-3 flex items-center gap-3"
+                  className="bg-brand-black-2 border border-brand-border rounded-sm px-4 py-3 flex min-w-0 items-center gap-3"
                 >
-                  <span className="font-display text-xl text-brand-gold w-6">{p.number}</span>
-                  <span className="flex-1">{p.name}</span>
-                  <span className="text-xs text-brand-gray uppercase">{p.position}</span>
+                  <span className="w-6 shrink-0 font-display text-xl text-brand-gold">{p.number}</span>
+                  <span className="min-w-0 flex-1 break-words">{p.name}</span>
+                  <span className="shrink-0 text-xs text-brand-gray uppercase">{p.position}</span>
                 </li>
               ))}
             </ul>
@@ -151,11 +152,11 @@ export default async function MatchDetailPage({
               {bench.map((p) => (
                 <li
                   key={p.id}
-                  className="bg-brand-black-2 border border-brand-border rounded-sm px-4 py-3 flex items-center gap-3"
+                  className="bg-brand-black-2 border border-brand-border rounded-sm px-4 py-3 flex min-w-0 items-center gap-3"
                 >
-                  <span className="font-display text-xl text-brand-gold w-6">{p.number}</span>
-                  <span className="flex-1">{p.name}</span>
-                  <span className="text-xs text-brand-gray uppercase">{p.position}</span>
+                  <span className="w-6 shrink-0 font-display text-xl text-brand-gold">{p.number}</span>
+                  <span className="min-w-0 flex-1 break-words">{p.name}</span>
+                  <span className="shrink-0 text-xs text-brand-gray uppercase">{p.position}</span>
                 </li>
               ))}
             </ul>
@@ -166,12 +167,16 @@ export default async function MatchDetailPage({
       {match.gallery.length > 0 && (
         <section className="container-x py-10">
           <h2 className="font-display text-3xl uppercase mb-5">Galeria da partida</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {match.gallery.map((src, i) => (
-              <div key={i} className="relative aspect-video bg-brand-black rounded-sm overflow-hidden">
-                <Image src={src} alt="" fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" />
-              </div>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {match.gallery.map((src, i) => {
+              const imgSrc = getValidImageSrc(src);
+              if (!imgSrc) return null;
+              return (
+                <div key={i} className="relative aspect-video bg-brand-black rounded-sm overflow-hidden">
+                  <Image src={imgSrc} alt="" fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -179,15 +184,17 @@ export default async function MatchDetailPage({
       {highlight && (
         <section className="container-x py-10">
           <div className="bg-brand-black-2 border border-brand-gold/40 rounded-sm p-8 flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-28 h-28 rounded-full overflow-hidden bg-brand-black">
-              <Image src={highlight.photo} alt={highlight.name} fill sizes="112px" className="object-cover" />
+            <div className="relative w-28 h-28 shrink-0 rounded-full overflow-hidden bg-brand-black">
+              {getValidImageSrc(highlight.photo) && (
+                <Image src={getValidImageSrc(highlight.photo)!} alt={highlight.name} fill sizes="112px" className="object-cover" />
+              )}
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <p className="text-brand-gold uppercase text-xs tracking-widest font-semibold mb-1">
                 Destaque do jogo
               </p>
-              <h3 className="font-display text-3xl uppercase">{highlight.nickname}</h3>
-              <p className="text-brand-gray italic mt-2">&ldquo;{match.highlightQuote}&rdquo;</p>
+              <h3 className="break-words font-display text-3xl uppercase">{highlight.nickname}</h3>
+              <p className="break-words text-brand-gray italic mt-2">&ldquo;{match.highlightQuote}&rdquo;</p>
             </div>
           </div>
         </section>
@@ -197,10 +204,17 @@ export default async function MatchDetailPage({
 }
 
 function TeamBlock({ logo, name }: { logo: string; name: string }) {
+  const logoSrc = getValidImageSrc(logo);
   return (
-    <div className="text-center">
-      <Image src={logo} alt={name} width={110} height={110} className="mx-auto h-[110px] w-[110px] object-contain" />
-      <p className="font-display text-lg md:text-2xl uppercase mt-2">{name}</p>
+    <div className="min-w-0 text-center">
+      {logoSrc ? (
+        <Image src={logoSrc} alt={name} width={110} height={110} className="mx-auto h-[110px] w-[110px] object-contain" />
+      ) : (
+        <div className="mx-auto h-[110px] w-[110px] rounded-sm bg-brand-black-2 border border-brand-border flex items-center justify-center text-xl font-bold text-brand-gray">
+          {name.slice(0, 2).toUpperCase()}
+        </div>
+      )}
+      <p className="break-words font-display text-lg md:text-2xl uppercase mt-2">{name}</p>
     </div>
   );
 }

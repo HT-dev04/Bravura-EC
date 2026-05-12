@@ -1,6 +1,6 @@
 import "server-only";
 
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 import { assetUrl } from "@/lib/asset-url";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -262,7 +262,7 @@ function sanitizeFinance(finance: FinanceData): FinanceData {
       id: item.id,
       date: item.date,
       name: item.name,
-      photo: item.photo || assetUrl("/sponsors/placeholder.svg"),
+      photo: item.photo || "",
       purpose: item.purpose,
       value: numberOrZero(item.value),
     });
@@ -329,7 +329,7 @@ function assertCmsPrismaDelegates() {
 }
 
 export async function getCmsData(): Promise<CmsData> {
-  noStore();
+  await connection();
   assertCmsPrismaDelegates();
 
   const [

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
-import { assetUrl } from "@/lib/asset-url";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type {
   FinanceData,
@@ -58,7 +57,7 @@ function makeSponsorship(): SponsorshipEntry {
     id: `pat${Date.now()}`,
     date: today(),
     name: "",
-    photo: assetUrl("/sponsors/placeholder.svg"),
+    photo: "",
     purpose: "",
     value: 0,
   };
@@ -82,6 +81,7 @@ export default function AdminFinanceiroPage() {
   const [editingExpense, setEditingExpense] = useState<ExpenseEntry | null>(null);
   const [editingSponsorship, setEditingSponsorship] = useState<SponsorshipEntry | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -307,8 +307,9 @@ export default function AdminFinanceiroPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                value={finance.monthlyFeeAmount}
-                onChange={(e) => persist({ ...finance, monthlyFeeAmount: Number(e.target.value) || 0 })}
+                value={finance.monthlyFeeAmount || ""}
+                placeholder="0"
+                onChange={(e) => persist({ ...finance, monthlyFeeAmount: e.target.value === "" ? 0 : +e.target.value })}
               />
             </div>
           </div>
@@ -405,7 +406,7 @@ export default function AdminFinanceiroPage() {
             <div><Label>Descrição</Label><Input required className="mt-1" value={editingRevenue.description} onChange={(e) => setEditingRevenue({ ...editingRevenue, description: e.target.value })} /></div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div><Label>Data</Label><Input required className="mt-1" type="date" value={editingRevenue.date} onChange={(e) => setEditingRevenue({ ...editingRevenue, date: e.target.value })} /></div>
-              <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" value={editingRevenue.value} onChange={(e) => setEditingRevenue({ ...editingRevenue, value: Number(e.target.value) || 0 })} /></div>
+              <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" placeholder="0" value={editingRevenue.value || ""} onChange={(e) => setEditingRevenue({ ...editingRevenue, value: e.target.value === "" ? 0 : +e.target.value })} /></div>
             </div>
             <FormActions saving={saving} onCancel={() => setEditingRevenue(null)} />
           </form>
@@ -418,7 +419,7 @@ export default function AdminFinanceiroPage() {
             <div><Label>Descrição</Label><Input required className="mt-1" value={editingExpense.description} onChange={(e) => setEditingExpense({ ...editingExpense, description: e.target.value })} /></div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div><Label>Data</Label><Input required className="mt-1" type="date" value={editingExpense.date} onChange={(e) => setEditingExpense({ ...editingExpense, date: e.target.value })} /></div>
-              <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" value={editingExpense.value} onChange={(e) => setEditingExpense({ ...editingExpense, value: Number(e.target.value) || 0 })} /></div>
+              <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" placeholder="0" value={editingExpense.value || ""} onChange={(e) => setEditingExpense({ ...editingExpense, value: e.target.value === "" ? 0 : +e.target.value })} /></div>
             </div>
             <FormActions saving={saving} onCancel={() => setEditingExpense(null)} />
           </form>
@@ -431,9 +432,36 @@ export default function AdminFinanceiroPage() {
             <div><Label>Nome</Label><Input required className="mt-1" value={editingSponsorship.name} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, name: e.target.value })} /></div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div><Label>Data</Label><Input required className="mt-1" type="date" value={editingSponsorship.date} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, date: e.target.value })} /></div>
-              <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" value={editingSponsorship.value} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, value: Number(e.target.value) || 0 })} /></div>
+              <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" placeholder="0" value={editingSponsorship.value || ""} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, value: e.target.value === "" ? 0 : +e.target.value })} /></div>
             </div>
-            <div><Label>Foto</Label><Input className="mt-1" type="file" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { const upload = await uploadAdminFile(file); setEditingSponsorship({ ...editingSponsorship, photo: upload.url }); } }} /></div>
+            <div>
+              <Label>Foto</Label>
+              <Input
+                className="mt-1"
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  setMessage(null);
+                  try {
+                    const upload = await uploadAdminFile(file);
+                    setEditingSponsorship((prev) => prev ? { ...prev, photo: upload.url } : prev);
+                  } catch {
+                    setMessage("Falha ao enviar foto. Verifique sua conexão e tente novamente.");
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+              {uploading && <p className="text-xs text-brand-gray mt-1">Enviando foto...</p>}
+              {editingSponsorship.photo && !uploading && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editingSponsorship.photo} alt="Preview" className="mt-2 h-16 w-auto object-contain" />
+              )}
+            </div>
             <div><Label>Finalidade</Label><Textarea required className="mt-1" value={editingSponsorship.purpose} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, purpose: e.target.value })} /></div>
             <FormActions saving={saving} onCancel={() => setEditingSponsorship(null)} />
           </form>

@@ -21,6 +21,21 @@ body {
   color: var(--color-brand-white);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -34,7 +49,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .container-x {
   width: 100%;
-  max-width: 1280px;
+  max-width: min(1280px, 100%);
   margin-left: auto;
   margin-right: auto;
   padding-left: 1rem;
