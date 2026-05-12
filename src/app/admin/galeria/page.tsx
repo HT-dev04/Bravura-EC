@@ -32,7 +32,7 @@ export default function AdminGaleriaPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const gallery = data?.data?.gallery || data?.gallery;
@@ -99,8 +99,8 @@ export default function AdminGaleriaPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl md:text-4xl uppercase">Galeria</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="font-display text-2xl md:text-4xl uppercase">Galeria</h1>
         <Button variant="primary" onClick={handleNew}>
           <Plus className="w-4 h-4" /> Nova mídia
         </Button>
@@ -125,7 +125,24 @@ export default function AdminGaleriaPage() {
               <p className="truncate">{g.caption}</p>
               <p className="text-brand-gray">{g.album} · {g.season}</p>
             </div>
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+            {/* Ações visíveis no mobile (touch não tem hover) */}
+            <div className="sm:hidden flex border-t border-brand-border">
+              <button
+                onClick={() => { setEditing(g); setOpen(true); }}
+                className="flex-1 py-2 text-xs uppercase text-brand-gold font-semibold hover:bg-white/5"
+              >
+                Editar
+              </button>
+              <div className="w-px bg-brand-border" />
+              <button
+                onClick={() => handleDelete(g.id)}
+                className="flex-1 py-2 text-xs uppercase text-brand-red font-semibold hover:bg-white/5"
+              >
+                Excluir
+              </button>
+            </div>
+            {/* Ações em overlay no desktop (hover) */}
+            <div className="hidden sm:flex absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 items-center justify-center gap-2 transition-opacity">
               <button
                 onClick={() => {
                   setEditing(g);
@@ -185,7 +202,7 @@ export default function AdminGaleriaPage() {
                 onChange={(e) => setEditing({ ...editing, caption: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Álbum</Label>
                 <Select

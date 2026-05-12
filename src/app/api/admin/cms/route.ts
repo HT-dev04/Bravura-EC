@@ -5,6 +5,7 @@ import type { CmsData } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 async function requireAdmin() {
   return Boolean(await getAdminSession());
@@ -28,7 +29,7 @@ function validateRows(collection: keyof CmsData, rows: CmsData[keyof CmsData]) {
 export async function GET() {
   if (!(await requireAdmin())) return errorResponse("Não autorizado", 401);
   const data = await getCmsData();
-  return NextResponse.json({ success: true, data, ...data });
+  return NextResponse.json({ success: true, data, ...data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
 export async function PUT(request: Request) {
@@ -57,7 +58,7 @@ export async function PUT(request: Request) {
         count: data.players.length,
       });
     }
-    return NextResponse.json({ success: true, data, ...data });
+    return NextResponse.json({ success: true, data, ...data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
     console.error("Erro na API /api/admin/cms", {
       message: error instanceof Error ? error.message : String(error),

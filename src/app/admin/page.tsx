@@ -32,12 +32,12 @@ export default async function AdminDashboard() {
           <h2 className="font-display uppercase text-sm text-brand-gold mb-3">Últimos pedidos</h2>
           <ul className="divide-y divide-brand-border text-sm">
             {orders.map((o) => (
-              <li key={o.id} className="py-3 flex justify-between">
-                <div>
-                  <p className="font-semibold">{o.id}</p>
-                  <p className="text-xs text-brand-gray">{formatDate(o.createdAt)} · {o.customer.name}</p>
+              <li key={o.id} className="py-3 flex justify-between gap-3 min-w-0">
+                <div className="min-w-0">
+                  <p className="font-semibold truncate">{o.id}</p>
+                  <p className="text-xs text-brand-gray truncate">{formatDate(o.createdAt)} · {o.customer.name}</p>
                 </div>
-                <p className="font-bold text-brand-gold">{formatCurrency(o.total)}</p>
+                <p className="font-bold text-brand-gold shrink-0">{formatCurrency(o.total)}</p>
               </li>
             ))}
           </ul>

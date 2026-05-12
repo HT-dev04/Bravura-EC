@@ -3,15 +3,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
-import { players as defaultPlayers } from "@/data/players";
 import { getCmsData } from "@/lib/cms-store";
 import { PlayerGoalsChart } from "./PlayerGoalsChart";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export function generateStaticParams() {
-  return defaultPlayers.map((p) => ({ slug: p.slug }));
+  return [];
 }
 
 export async function generateMetadata({
@@ -23,7 +23,11 @@ export async function generateMetadata({
   const { players } = await getCmsData();
   const player = players.find((p) => p.slug === slug);
   if (!player) return { title: "Jogador não encontrado" };
-  return { title: `${player.nickname} · ${player.name}`, description: player.bio };
+  return {
+    title: `${player.nickname} · ${player.name}`,
+    description: player.bio || `Perfil de ${player.name} no elenco do Bravura EC — posição, estatísticas e carreira.`,
+    alternates: { canonical: `/elenco/${slug}` },
+  };
 }
 
 export default async function PlayerDetailPage({

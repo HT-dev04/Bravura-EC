@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Calendar, MapPin, Trophy } from "lucide-react";
@@ -8,16 +9,23 @@ import { NewsCard } from "@/components/site/NewsCard";
 import { SponsorGrid } from "@/components/site/SponsorGrid";
 import { Button } from "@/components/ui/button";
 import { clubInfo } from "@/data/club";
-import { sponsors } from "@/data/sponsors";
 import { getCmsData } from "@/lib/cms-store";
 import { bravuraLogo } from "@/lib/asset-url";
 import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
 import { formatDateLong, formatTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Bravura Esporte Clube — Site Oficial",
+  description:
+    "Site oficial do Bravura EC de Bugre-MG. Acompanhe o elenco do Bravura, os jogos do Bravura, estatísticas, galeria e a história do Bravura Futebol Clube.",
+  alternates: { canonical: "/" },
+};
 
 export default async function HomePage() {
-  const { matches, news, gallery, players } = await getCmsData();
+  const { matches, news, gallery, players, sponsors } = await getCmsData();
   const next = matches
     .filter((m) => m.status === "agendada")
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))[0];
@@ -44,7 +52,7 @@ export default async function HomePage() {
               &ldquo;{clubInfo.motto}&rdquo;
             </p>
             <p className="text-sm text-brand-gray max-w-xl mb-8">
-              Fundado em {clubInfo.founded} · Bugre, MG. Paixão pelo futebol, compromisso com a comunidade.
+              Fundado em {clubInfo.founded} em Bugre, MG — o Bravura Futebol nasce para resgatar talentos e fortalecer o futebol local. No site oficial do Bravura você acompanha o elenco do Bravura, os jogos do Bravura EC, a galeria e a história do Bravura Esporte Clube.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/jogos">

@@ -9,7 +9,8 @@ import { Shield, Target, Eye, Heart } from "lucide-react";
 export const metadata: Metadata = {
   title: "O Clube",
   description:
-    "Conheça a história, missão e valores do Bravura Esporte Clube — clube amador de Bugre-MG fundado em 2026 para resgatar talentos e fortalecer o futebol local.",
+    "Conheça a história do Bravura EC — missão, valores e trajetória do Bravura Futebol Clube de Bugre-MG, fundado em 2026 para resgatar talentos e fortalecer o futebol local.",
+  alternates: { canonical: "/o-clube" },
 };
 
 export default function ClubePage() {

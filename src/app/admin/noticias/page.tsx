@@ -19,7 +19,7 @@ export default function AdminNoticiasPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.news && setRows(data.news));
   }, []);
@@ -65,8 +65,8 @@ export default function AdminNoticiasPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl md:text-4xl uppercase">Notícias</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="font-display text-2xl md:text-4xl uppercase">Notícias</h1>
         <Button variant="primary" onClick={handleNew}>
           <Plus className="w-4 h-4" /> Nova
         </Button>
@@ -125,7 +125,7 @@ export default function AdminNoticiasPage() {
                 onChange={(e) => setEditing({ ...editing, title: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Categoria</Label>
                 <Select

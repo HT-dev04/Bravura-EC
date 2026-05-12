@@ -5,14 +5,14 @@ import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { NewsCard } from "@/components/site/NewsCard";
 import { Badge } from "@/components/ui/badge";
-import { news as defaultNews } from "@/data/news";
 import { getCmsData } from "@/lib/cms-store";
 import { formatDateLong } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export function generateStaticParams() {
-  return defaultNews.map((n) => ({ slug: n.slug }));
+  return [];
 }
 
 export async function generateMetadata({
@@ -27,6 +27,7 @@ export async function generateMetadata({
   return {
     title: item.title,
     description: item.excerpt,
+    alternates: { canonical: `/noticias/${slug}` },
     openGraph: { images: [item.cover] },
   };
 }

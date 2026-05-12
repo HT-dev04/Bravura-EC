@@ -21,7 +21,7 @@ export default function AdminJogadoresPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.players && setRows(data.players));
   }, []);
@@ -101,8 +101,8 @@ export default function AdminJogadoresPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl md:text-4xl uppercase">Jogadores</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="font-display text-2xl md:text-4xl uppercase">Jogadores</h1>
         <Button variant="primary" onClick={handleNew}>
           <Plus className="w-4 h-4" /> Novo
         </Button>
@@ -158,9 +158,9 @@ export default function AdminJogadoresPage() {
               e.preventDefault();
               handleSave(editing);
             }}
-            className="grid grid-cols-2 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
           >
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Nome</Label>
               <Input
                 required
@@ -231,7 +231,7 @@ export default function AdminJogadoresPage() {
                 }}
               />
             </div>
-            <div className="col-span-2 flex justify-end gap-2">
+            <div className="col-span-1 sm:col-span-2 flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"

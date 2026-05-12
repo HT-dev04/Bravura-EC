@@ -4,22 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { PlayerCard } from "@/components/site/PlayerCard";
 import { Input } from "@/components/ui/input";
-import { players } from "@/data/players";
-import type { Position } from "@/types";
+import type { Player, Position } from "@/types";
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 
 const positions: Array<Position | "Todos"> = ["Todos", "Goleiro", "Defensor", "Meia", "Atacante"];
 
 export default function ElencoPage() {
-  const [roster, setRoster] = useState(players);
+  const [roster, setRoster] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
   const [pos, setPos] = useState<Position | "Todos">("Todos");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("/api/cms")
+    fetch("/api/cms", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => data?.players && setRoster(data.players));
+      .then((data) => setRoster(Array.isArray(data?.players) ? data.players : []))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => {
@@ -77,8 +78,10 @@ export default function ElencoPage() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
-          <p className="text-brand-gray text-center py-14">Nenhum jogador encontrado.</p>
+        {loading ? (
+          <p className="text-brand-gray text-center py-14">Carregando elenco...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-brand-gray text-center py-14">Nenhum jogador cadastrado.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {filtered.map((p) => (

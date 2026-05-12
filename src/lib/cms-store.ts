@@ -1,13 +1,6 @@
 import "server-only";
 
-import { gallery } from "@/data/gallery";
-import { matches } from "@/data/matches";
-import { news } from "@/data/news";
-import { orders } from "@/data/orders";
-import { players } from "@/data/players";
-import { products } from "@/data/products";
-import { sponsors } from "@/data/sponsors";
-import { getTeamStats } from "@/lib/cms-stats";
+import { unstable_noStore as noStore } from "next/cache";
 import { assetUrl } from "@/lib/asset-url";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -36,19 +29,18 @@ const defaultFinance: FinanceData = {
   sponsorships: [],
 };
 
-export function defaultCmsData(): CmsData {
-  return {
-    players,
-    matches,
-    news,
-    gallery,
-    products,
-    sponsors,
-    orders,
-    teamStats: getTeamStats(matches),
-    finance: defaultFinance,
-  };
-}
+const emptyTeamStats: TeamStatsSummary = {
+  games: 0,
+  wins: 0,
+  draws: 0,
+  losses: 0,
+  goalsFor: 0,
+  goalsAgainst: 0,
+  winRate: 0,
+  cleanSheets: 0,
+  goalsByMonth: [],
+  winRateByCompetition: [],
+};
 
 function json<T>(value: T) {
   return value as Prisma.InputJsonValue;
@@ -219,7 +211,7 @@ function toTeamStats(stats: TeamStatsSummary) {
 }
 
 function fromTeamStats(stats: Awaited<ReturnType<typeof prisma.teamStats.findUnique>>): TeamStatsSummary {
-  if (!stats) return defaultCmsData().teamStats;
+  if (!stats) return emptyTeamStats;
   return {
     games: stats.games,
     wins: stats.wins,
@@ -337,6 +329,7 @@ function assertCmsPrismaDelegates() {
 }
 
 export async function getCmsData(): Promise<CmsData> {
+  noStore();
   assertCmsPrismaDelegates();
 
   const [

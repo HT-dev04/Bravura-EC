@@ -3,16 +3,16 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Badge } from "@/components/ui/badge";
-import { matches as defaultMatches } from "@/data/matches";
 import { getCmsData } from "@/lib/cms-store";
 import { bravuraLogo } from "@/lib/asset-url";
 import { formatDateLong, formatTime } from "@/lib/utils";
 import { Shirt, Calendar, MapPin, Trophy } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export function generateStaticParams() {
-  return defaultMatches.map((m) => ({ id: m.id }));
+  return [];
 }
 
 export async function generateMetadata({
@@ -26,7 +26,8 @@ export async function generateMetadata({
   if (!match) return { title: "Partida não encontrada" };
   return {
     title: `Bravura × ${match.opponent}`,
-    description: `${match.competition} · ${formatDateLong(match.date)}`,
+    description: `Bravura EC × ${match.opponent} — ${match.competition} · ${formatDateLong(match.date)}. Veja o resumo da partida do Bravura Futebol Clube.`,
+    alternates: { canonical: `/jogos/${id}` },
   };
 }
 

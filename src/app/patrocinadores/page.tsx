@@ -3,12 +3,17 @@ import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { SponsorGrid } from "@/components/site/SponsorGrid";
 import { Button } from "@/components/ui/button";
-import { sponsors } from "@/data/sponsors";
+import { getCmsData } from "@/lib/cms-store";
 import { Check, Megaphone, Users, TrendingUp } from "lucide-react";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Patrocinadores",
-  description: "Conheça os parceiros do Bravura Esporte Clube e saiba como patrocinar o clube.",
+  description:
+    "Conheça os patrocinadores do Bravura EC e saiba como apoiar o Bravura Esporte Clube de Bugre-MG. Planos de patrocínio disponíveis.",
+  alternates: { canonical: "/patrocinadores" },
 };
 
 const plans = [
@@ -46,7 +51,9 @@ const plans = [
   },
 ];
 
-export default function PatrocinadoresPage() {
+export default async function PatrocinadoresPage() {
+  const { sponsors } = await getCmsData();
+
   return (
     <SiteShell>
       <section className="diag-section py-14">

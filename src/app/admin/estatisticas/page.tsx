@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
-import { players as initialPlayers } from "@/data/players";
 import { saveAdminCollection } from "@/lib/admin-client";
 import type { Player, TeamStatsSummary } from "@/types";
 
@@ -30,14 +29,14 @@ function calculateWinRate(games: number, wins: number, draws: number) {
 
 export default function AdminEstatisticasPage() {
   const [tab, setTab] = useState<Tab>("geral");
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStatsSummary>(emptyTeamStats);
-  const [selectedPlayerId, setSelectedPlayerId] = useState(initialPlayers[0]?.id || "");
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [savingTeam, setSavingTeam] = useState(false);
   const [savingPlayers, setSavingPlayers] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.players) {
@@ -76,9 +75,9 @@ export default function AdminEstatisticasPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-brand-gold mb-2">Admin</p>
-          <h1 className="font-display text-3xl md:text-4xl uppercase">Estatísticas</h1>
+          <h1 className="font-display text-2xl md:text-4xl uppercase">Estatísticas</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setTab("geral")}

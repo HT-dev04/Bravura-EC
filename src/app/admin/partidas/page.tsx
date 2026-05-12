@@ -19,7 +19,7 @@ export default function AdminPartidasPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.matches && setRows(data.matches));
   }, []);
@@ -96,8 +96,8 @@ export default function AdminPartidasPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl md:text-4xl uppercase">Partidas</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="font-display text-2xl md:text-4xl uppercase">Partidas</h1>
         <Button variant="primary" onClick={handleNew}>
           <Plus className="w-4 h-4" /> Nova
         </Button>
@@ -155,8 +155,8 @@ export default function AdminPartidasPage() {
             }}
             className="space-y-4"
           >
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 sm:col-span-2">
                 <Label>Adversário</Label>
                 <Input
                   required
@@ -294,7 +294,7 @@ export default function AdminPartidasPage() {
                 {editing.events.map((ev, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-[60px_1fr_1fr_1fr_auto] gap-2 items-center bg-brand-black border border-brand-border rounded-sm p-2"
+                    className="grid grid-cols-1 sm:grid-cols-[60px_1fr_1fr_1fr_auto] gap-2 items-center bg-brand-black border border-brand-border rounded-sm p-2"
                   >
                     <Input
                       type="number"

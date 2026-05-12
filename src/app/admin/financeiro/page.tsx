@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { players as initialPlayers } from "@/data/players";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
 import { assetUrl } from "@/lib/asset-url";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -73,7 +72,7 @@ function isInPeriod(date: string, mode: FilterMode, selectedMonth: string, selec
 }
 
 export default function AdminFinanceiroPage() {
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [finance, setFinance] = useState<FinanceData>(emptyFinance);
   const [tab, setTab] = useState<Tab>("mensalidades");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth());
@@ -86,7 +85,7 @@ export default function AdminFinanceiroPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const cms = data?.data || data;
@@ -229,7 +228,7 @@ export default function AdminFinanceiroPage() {
           <p className="text-xs uppercase tracking-widest text-brand-gold mb-2">Admin</p>
           <h1 className="font-display text-3xl md:text-4xl uppercase">Controle financeiro</h1>
         </div>
-        <div className="grid sm:grid-cols-3 gap-3 min-w-0 lg:min-w-[560px]">
+        <div className="grid sm:grid-cols-3 gap-3 min-w-0 w-full lg:max-w-lg">
           <div>
             <Label>Filtro</Label>
             <Select className="mt-1" value={filterMode} onChange={(e) => setFilterMode(e.target.value as FilterMode)}>

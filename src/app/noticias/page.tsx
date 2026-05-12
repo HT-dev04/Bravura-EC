@@ -4,20 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { NewsCard } from "@/components/site/NewsCard";
 import { Input, Select } from "@/components/ui/input";
-import { news } from "@/data/news";
+import type { NewsItem } from "@/types";
 import { Search } from "lucide-react";
 
 const categories = ["Todas", "Jogos", "Bastidores", "Mercado"] as const;
 
 export default function NoticiasPage() {
-  const [items, setItems] = useState(news);
+  const [items, setItems] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<(typeof categories)[number]>("Todas");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("/api/cms")
+    fetch("/api/cms", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => data?.news && setItems(data.news));
+      .then((data) => setItems(Array.isArray(data?.news) ? data.news : []))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => {
@@ -62,15 +64,17 @@ export default function NoticiasPage() {
           </Select>
         </div>
 
-        {feature && <div className="mb-8"><NewsCard item={feature} feature /></div>}
+        {loading && <p className="text-center text-brand-gray py-14">Carregando notícias...</p>}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {!loading && feature && <div className="mb-8"><NewsCard item={feature} feature /></div>}
+
+        {!loading && <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {rest.map((n) => (
             <NewsCard key={n.id} item={n} />
           ))}
-        </div>
+        </div>}
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <p className="text-center text-brand-gray py-14">Nenhuma notícia encontrada.</p>
         )}
       </section>

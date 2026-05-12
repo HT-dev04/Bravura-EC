@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { ProductCard } from "@/components/shop/ProductCard";
-import { products } from "@/data/products";
-import type { ProductCategory } from "@/types";
+import { getCmsData } from "@/lib/cms-store";
+import type { Product, ProductCategory } from "@/types";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Loja Oficial",
-  description: "Camisas oficiais, uniformes, acessórios e produtos exclusivos do Bravura Esporte Clube.",
+  description:
+    "Loja oficial do Bravura EC — camisas, uniformes de jogo, acessórios e produtos exclusivos do Bravura Futebol Clube. Entrega para todo o Brasil.",
+  alternates: { canonical: "/loja" },
 };
 
 const categoryLabels: Record<ProductCategory, string> = {
@@ -16,7 +21,8 @@ const categoryLabels: Record<ProductCategory, string> = {
   promocoes: "Promoções",
 };
 
-export default function LojaPage() {
+export default async function LojaPage() {
+  const { products } = await getCmsData();
   const featured = products.filter((p) => p.featured);
   const novos = products.filter((p) => p.isNew);
   const bests = products.filter((p) => p.bestseller);
@@ -48,7 +54,7 @@ export default function LojaPage() {
   );
 }
 
-function ProductRow({ title, list }: { title: string; list: typeof products }) {
+function ProductRow({ title, list }: { title: string; list: Product[] }) {
   if (list.length === 0) return null;
   return (
     <section className="container-x py-8">

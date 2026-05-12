@@ -5,22 +5,23 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Lightbox } from "@/components/site/Lightbox";
 import { Select } from "@/components/ui/input";
-import { gallery } from "@/data/gallery";
-import type { GalleryAlbum } from "@/types";
+import type { GalleryAlbum, GalleryPhoto } from "@/types";
 import { cn } from "@/lib/utils";
 
 const albums: Array<GalleryAlbum | "Todos"> = ["Todos", "Jogos", "Elenco", "Bastidores", "Treinos", "Artes"];
 
 export default function GaleriaPage() {
-  const [items, setItems] = useState(gallery);
+  const [items, setItems] = useState<GalleryPhoto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [album, setAlbum] = useState<GalleryAlbum | "Todos">("Todos");
   const [season, setSeason] = useState("todas");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/cms")
+    fetch("/api/cms", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => data?.gallery && setItems(data.gallery));
+      .then((data) => setItems(Array.isArray(data?.gallery) ? data.gallery : []))
+      .finally(() => setLoading(false));
   }, []);
 
   const seasons = Array.from(new Set(items.map((g) => g.season)));
@@ -72,8 +73,13 @@ export default function GaleriaPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {filtered.map((g, i) => (
+        {loading ? (
+          <p className="text-brand-gray text-center py-14">Carregando galeria...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-brand-gray text-center py-14">Nenhuma mídia cadastrada.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filtered.map((g, i) => (
             <button
               key={g.id}
               onClick={() => setOpenIdx(i)}
@@ -89,8 +95,9 @@ export default function GaleriaPage() {
                 {g.caption}
               </p>
             </button>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {openIdx !== null && filtered[openIdx]?.mediaType !== "video" && (

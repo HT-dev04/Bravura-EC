@@ -17,7 +17,7 @@ export default function AdminPatrocinadoresPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.sponsors && setRows(data.sponsors));
   }, []);
@@ -49,8 +49,8 @@ export default function AdminPatrocinadoresPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl md:text-4xl uppercase">Patrocinadores</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="font-display text-2xl md:text-4xl uppercase">Patrocinadores</h1>
         <Button variant="primary" onClick={handleNew}>
           <Plus className="w-4 h-4" /> Novo
         </Button>

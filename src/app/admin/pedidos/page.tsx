@@ -5,7 +5,6 @@ import { DataTable } from "@/components/admin/DataTable";
 import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { orders as initial } from "@/data/orders";
 import { saveAdminCollection } from "@/lib/admin-client";
 import type { Order } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -18,12 +17,12 @@ const statusVariant: Record<Order["status"], "gray" | "gold" | "green" | "red"> 
 };
 
 export default function AdminPedidosPage() {
-  const [rows, setRows] = useState<Order[]>(initial);
+  const [rows, setRows] = useState<Order[]>([]);
   const [viewing, setViewing] = useState<Order | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms")
+    fetch("/api/admin/cms", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const orders = data?.data?.orders || data?.orders;
@@ -60,7 +59,7 @@ export default function AdminPedidosPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <h1 className="font-display text-3xl md:text-4xl uppercase mb-6">Pedidos</h1>
+      <h1 className="font-display text-2xl md:text-4xl uppercase mb-6">Pedidos</h1>
       {message && <p className="mb-4 text-sm text-brand-gray">{message}</p>}
 
       <DataTable

@@ -4,20 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { MatchCard } from "@/components/site/MatchCard";
 import { Select } from "@/components/ui/input";
-import { matches } from "@/data/matches";
-import type { MatchResult } from "@/types";
+import type { Match, MatchResult } from "@/types";
 import { cn } from "@/lib/utils";
 
 export default function JogosPage() {
-  const [list, setList] = useState(matches);
+  const [list, setList] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
   const [season, setSeason] = useState("todas");
   const [competition, setCompetition] = useState("todas");
   const [result, setResult] = useState<MatchResult | "todos">("todos");
 
   useEffect(() => {
-    fetch("/api/cms")
+    fetch("/api/cms", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => data?.matches && setList(data.matches));
+      .then((data) => setList(Array.isArray(data?.matches) ? data.matches : []))
+      .finally(() => setLoading(false));
   }, []);
 
   const seasons = Array.from(new Set(list.map((m) => m.season)));
@@ -89,11 +90,15 @@ export default function JogosPage() {
           </div>
         </div>
 
-        <div className="space-y-3">
+        {loading ? (
+          <p className="text-brand-gray text-center py-14">Carregando partidas...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-brand-gray text-center py-14">Nenhuma partida cadastrada.</p>
+        ) : <div className="space-y-3">
           {filtered.map((m) => (
             <MatchCard key={m.id} match={m} />
           ))}
-        </div>
+        </div>}
       </section>
     </SiteShell>
   );

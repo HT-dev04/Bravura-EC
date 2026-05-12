@@ -10,7 +10,9 @@ import type { Player } from "@/types";
 
 export const metadata: Metadata = {
   title: "Estatísticas",
-  description: "Números e rankings do Bravura Esporte Clube na temporada.",
+  description:
+    "Estatísticas completas do Bravura EC na temporada: artilheiros, assistências, aproveitamento e rankings dos jogadores do Bravura Futebol Clube.",
+  alternates: { canonical: "/estatisticas" },
 };
 
 export const dynamic = "force-dynamic";
