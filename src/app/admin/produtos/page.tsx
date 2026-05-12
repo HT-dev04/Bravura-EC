@@ -56,7 +56,7 @@ export default function AdminProdutosPage() {
   }
 
   return (
-    <div className="p-6 md:p-10">
+    <div className="p-4 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="font-display text-2xl md:text-4xl uppercase">Produtos</h1>
         <Button variant="primary" onClick={handleNew}>

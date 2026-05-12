@@ -15,7 +15,7 @@ export default function CarrinhoPage() {
   return (
     <SiteShell>
       <section className="container-x py-14">
-        <h1 className="font-display text-4xl md:text-5xl uppercase mb-8">Meu carrinho</h1>
+        <h1 className="break-words font-display text-4xl md:text-5xl uppercase mb-8">Meu carrinho</h1>
 
         {items.length === 0 ? (
           <div className="bg-brand-black-2 border border-brand-border rounded-sm p-10 text-center">
@@ -25,7 +25,7 @@ export default function CarrinhoPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8">
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] gap-8">
             <div className="space-y-3">
               {items.map((it) => (
                 <div
@@ -77,8 +77,8 @@ export default function CarrinhoPage() {
               ))}
             </div>
 
-            <aside className="bg-brand-black-2 border border-brand-border rounded-sm p-6 h-fit sticky top-20">
-              <h2 className="font-display uppercase text-lg mb-4">Resumo</h2>
+            <aside className="min-w-0 bg-brand-black-2 border border-brand-border rounded-sm p-4 sm:p-6 h-fit lg:sticky lg:top-20">
+              <h2 className="break-words font-display uppercase text-lg mb-4">Resumo</h2>
               <div className="flex justify-between gap-4 text-sm mb-2">
                 <span className="text-brand-gray">Subtotal</span>
                 <span>{formatCurrency(subtotal())}</span>

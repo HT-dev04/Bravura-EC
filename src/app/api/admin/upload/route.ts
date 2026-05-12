@@ -1,7 +1,7 @@
 import path from "path";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getSupabaseAdmin, getUploadBucket } from "@/lib/supabase-admin";
+import { ensureUploadBucket, getSupabaseAdmin, getUploadBucket } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 
@@ -20,12 +20,14 @@ export async function POST(request: Request) {
     const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     const bucket = getUploadBucket();
     const supabase = getSupabaseAdmin();
+    await ensureUploadBucket(supabase, bucket);
+
     const { error } = await supabase.storage.from(bucket).upload(safeName, Buffer.from(await file.arrayBuffer()), {
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: `Falha ao enviar para o bucket '${bucket}': ${error.message}` }, { status: 500 });
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(safeName);
 

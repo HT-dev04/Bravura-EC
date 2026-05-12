@@ -222,7 +222,7 @@ export default function AdminFinanceiroPage() {
   monthMovements.sort((a, b) => a.date.localeCompare(b.date));
 
   return (
-    <div className="p-6 md:p-10 space-y-6">
+    <div className="p-4 md:p-10 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-brand-gold mb-2">Admin</p>
@@ -479,7 +479,7 @@ function MonthlySummary({ movements, income, expenses, monthlyTotal, revenueTota
   const balance = income - expenses;
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-4 gap-3">
         <SummaryCard label="Entrou no mês" value={formatCurrency(income)} detail="Mensalidades + receitas + patrocínios" />
         <SummaryCard label="Gastou no mês" value={formatCurrency(expenses)} detail="Total de gastos registrados" />
         <SummaryCard label="Saldo do mês" value={formatCurrency(balance)} detail={balance >= 0 ? "Resultado positivo" : "Resultado negativo"} />

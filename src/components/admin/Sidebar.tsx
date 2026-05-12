@@ -56,7 +56,7 @@ export function Sidebar() {
             className="h-9 w-9 object-contain"
             priority
           />
-          <div>
+          <div className="min-w-0">
             <p className="font-display uppercase text-sm tracking-wider">Bravura EC</p>
             <p className="text-[10px] text-brand-gold uppercase tracking-widest">Admin</p>
           </div>
@@ -79,7 +79,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span className="uppercase text-xs tracking-wider font-semibold">{l.label}</span>
+              <span className="min-w-0 break-words uppercase text-xs tracking-wider font-semibold">{l.label}</span>
             </Link>
           );
         })}
@@ -121,7 +121,7 @@ export function Sidebar() {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <Link href="/admin" className="flex items-center gap-2">
+        <Link href="/admin" className="flex min-w-0 items-center gap-2">
           <Image
             src={bravuraLogo}
             alt="Bravura EC"
@@ -129,7 +129,7 @@ export function Sidebar() {
             height={28}
             className="h-7 w-7 object-contain"
           />
-          <span className="font-display uppercase text-sm tracking-wider">Bravura EC</span>
+          <span className="min-w-0 truncate font-display uppercase text-sm tracking-wider">Bravura EC</span>
         </Link>
         <div className="w-7" />
       </div>
@@ -153,7 +153,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between p-4 border-b border-brand-border">
           <Link href="/admin" className="flex items-center gap-2" onClick={() => setOpen(false)}>
             <Image src={bravuraLogo} alt="Bravura EC" width={28} height={28} className="h-7 w-7 object-contain" />
-            <div>
+            <div className="min-w-0">
               <p className="font-display uppercase text-sm tracking-wider">Bravura EC</p>
               <p className="text-[10px] text-brand-gold uppercase tracking-widest">Admin</p>
             </div>
@@ -179,7 +179,7 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                <span className="uppercase text-xs tracking-wider font-semibold">{l.label}</span>
+                <span className="min-w-0 break-words uppercase text-xs tracking-wider font-semibold">{l.label}</span>
               </Link>
             );
           })}

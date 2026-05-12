@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
-import { assetUrl, bravuraLogo } from "@/lib/asset-url";
+import { bravuraLogo } from "@/lib/asset-url";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -45,13 +45,13 @@ export const metadata: Metadata = {
     siteName: "Bravura Esporte Clube",
     locale: "pt_BR",
     type: "website",
-    images: [{ url: assetUrl("/og.jpg"), width: 1200, height: 630, alt: "Bravura Esporte Clube" }],
+    images: [{ url: bravuraLogo, width: 512, height: 512, alt: "Bravura Esporte Clube" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Bravura Esporte Clube — Site Oficial",
     description: "Site oficial do Bravura EC de Bugre-MG. Elenco, jogos, galeria e loja.",
-    images: [assetUrl("/og.jpg")],
+    images: [bravuraLogo],
   },
   robots: { index: true, follow: true },
   icons: { icon: bravuraLogo },

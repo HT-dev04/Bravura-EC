@@ -58,7 +58,7 @@ export default function AdminPedidosPage() {
   }
 
   return (
-    <div className="p-6 md:p-10">
+    <div className="p-4 md:p-10">
       <h1 className="font-display text-2xl md:text-4xl uppercase mb-6">Pedidos</h1>
       {message && <p className="mb-4 text-sm text-brand-gray">{message}</p>}
 

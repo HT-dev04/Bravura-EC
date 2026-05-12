@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!(await getAdminSession())) redirect("/entrar-admin");
 
   return (
-    <div className="flex min-h-screen bg-brand-black">
+    <div className="flex min-h-screen max-w-full overflow-x-hidden bg-brand-black">
       <Sidebar />
       <main className="flex-1 min-w-0 pt-14 md:pt-0">{children}</main>
     </div>

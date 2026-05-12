@@ -27,6 +27,7 @@ function makeUniqueGalleryRows(items: GalleryPhoto[]) {
 export default function AdminGaleriaPage() {
   const [rows, setRows] = useState<GalleryPhoto[]>([]);
   const [editing, setEditing] = useState<GalleryPhoto | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -45,7 +46,18 @@ export default function AdminGaleriaPage() {
       });
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
+
+  function clearLocalPreview() {
+    setLocalPreview(null);
+  }
+
   function handleNew() {
+    clearLocalPreview();
     setEditing({
       id: `g${Date.now()}`,
       src: "",
@@ -80,12 +92,19 @@ export default function AdminGaleriaPage() {
       const exists = rows.find((x) => x.id === g.id);
       const next = exists ? rows.map((x) => (x.id === g.id ? g : x)) : [...rows, g];
       if (await persist(next)) {
+        clearLocalPreview();
         setOpen(false);
         setEditing(null);
       }
     } finally {
       setSaving(false);
     }
+  }
+
+  async function upsertGalleryItem(item: GalleryPhoto) {
+    const exists = rows.some((row) => row.id === item.id);
+    const next = exists ? rows.map((row) => (row.id === item.id ? item : row)) : [...rows, item];
+    return persist(next);
   }
 
   async function handleDelete(id: string) {
@@ -99,7 +118,7 @@ export default function AdminGaleriaPage() {
   }
 
   return (
-    <div className="p-6 md:p-10">
+    <div className="p-4 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="font-display text-2xl md:text-4xl uppercase">Galeria</h1>
         <Button variant="primary" onClick={handleNew}>
@@ -109,7 +128,7 @@ export default function AdminGaleriaPage() {
 
       {message && <p className="mb-4 text-sm text-brand-gray">{message}</p>}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {rows.map((g) => (
           <div
             key={g.id}
@@ -170,6 +189,7 @@ export default function AdminGaleriaPage() {
         <Dialog
           open={open}
           onClose={() => {
+            clearLocalPreview();
             setOpen(false);
             setEditing(null);
           }}
@@ -192,11 +212,23 @@ export default function AdminGaleriaPage() {
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
+                  clearLocalPreview();
+                  const preview = URL.createObjectURL(f);
+                  setLocalPreview(preview);
+                  setEditing((prev) => prev ? { ...prev, mediaType: f.type.startsWith("video/") ? "video" : "image" } : prev);
                   setUploading(true);
                   setMessage(null);
                   try {
                     const upload = await uploadAdminFile(f);
-                    setEditing((prev) => prev ? { ...prev, src: upload.url, mediaType: upload.type } : prev);
+                    const nextEditing = {
+                      ...editing,
+                      src: upload.url,
+                      mediaType: upload.type,
+                      caption: editing.caption || f.name.replace(/\.[^.]+$/, ""),
+                    };
+                    setEditing(nextEditing);
+                    await upsertGalleryItem(nextEditing);
+                    setMessage("Upload concluído. A mídia já está disponível na galeria do site e no admin.");
                   } catch (error) {
                     setMessage(error instanceof Error ? error.message : "Falha ao enviar arquivo. Verifique sua conexão e tente novamente.");
                   } finally {
@@ -205,12 +237,12 @@ export default function AdminGaleriaPage() {
                 }}
               />
               {uploading && <p className="text-xs text-brand-gray mt-1">Enviando arquivo...</p>}
-              {editing.src && !uploading && editing.mediaType === "video" && (
-                <video src={editing.src} className="mt-2 h-24 w-auto rounded-sm object-cover" muted controls />
+              {(localPreview || editing.src) && editing.mediaType === "video" && (
+                <video src={localPreview || editing.src} className="mt-2 h-24 max-w-full w-auto rounded-sm object-cover" muted controls />
               )}
-              {editing.src && !uploading && editing.mediaType !== "video" && (
+              {(localPreview || editing.src) && editing.mediaType !== "video" && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={editing.src} alt="Preview" className="mt-2 h-24 w-auto rounded-sm object-cover" />
+                <img src={localPreview || editing.src} alt="Preview" className="mt-2 h-24 max-w-full w-auto rounded-sm object-cover" />
               )}
             </div>
             <div>
@@ -250,6 +282,7 @@ export default function AdminGaleriaPage() {
                 type="button"
                 variant="outline"
                 onClick={() => {
+                  clearLocalPreview();
                   setOpen(false);
                   setEditing(null);
                 }}

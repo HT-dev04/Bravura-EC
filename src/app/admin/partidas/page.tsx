@@ -95,7 +95,7 @@ export default function AdminPartidasPage() {
   }
 
   return (
-    <div className="p-6 md:p-10">
+    <div className="p-4 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="font-display text-2xl md:text-4xl uppercase">Partidas</h1>
         <Button variant="primary" onClick={handleNew}>
@@ -380,7 +380,7 @@ export default function AdminPartidasPage() {
                       </Select>
                     </div>
                     {/* Mobile: linha 2 — jogador + time + excluir */}
-                    <div className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:contents">
+                    <div className="grid grid-cols-1 min-[420px]:grid-cols-[1fr_1fr_auto] gap-2 sm:contents">
                       <Input
                         placeholder="Jogador"
                         value={ev.playerName}

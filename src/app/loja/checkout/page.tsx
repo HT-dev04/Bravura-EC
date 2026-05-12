@@ -28,8 +28,8 @@ export default function CheckoutPage() {
     return (
       <SiteShell>
         <section className="container-x py-20 text-center">
-          <h1 className="font-display text-3xl uppercase mb-4">Carrinho vazio</h1>
-          <p className="text-brand-gray mb-6">Adicione itens antes de finalizar.</p>
+          <h1 className="break-words font-display text-3xl uppercase mb-4">Carrinho vazio</h1>
+          <p className="break-words text-brand-gray mb-6">Adicione itens antes de finalizar.</p>
           <Button onClick={() => router.push("/loja")}>Voltar à loja</Button>
         </section>
       </SiteShell>
@@ -39,11 +39,11 @@ export default function CheckoutPage() {
   return (
     <SiteShell>
       <section className="container-x py-14">
-        <h1 className="font-display text-4xl md:text-5xl uppercase mb-8">Checkout</h1>
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1fr_380px] gap-8">
-          <div className="bg-brand-black-2 border border-brand-border rounded-sm p-6 space-y-6">
+        <h1 className="break-words font-display text-4xl md:text-5xl uppercase mb-8">Checkout</h1>
+        <form onSubmit={handleSubmit} className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-8">
+          <div className="min-w-0 bg-brand-black-2 border border-brand-border rounded-sm p-4 sm:p-6 space-y-6">
             <div>
-              <h2 className="font-display uppercase text-lg mb-4 text-brand-gold">Dados pessoais</h2>
+              <h2 className="break-words font-display uppercase text-lg mb-4 text-brand-gold">Dados pessoais</h2>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <Label>Nome completo</Label>
@@ -60,7 +60,7 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div>
-              <h2 className="font-display uppercase text-lg mb-4 text-brand-gold">Endereço</h2>
+              <h2 className="break-words font-display uppercase text-lg mb-4 text-brand-gold">Endereço</h2>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
                   <Label>Endereço</Label>
@@ -87,8 +87,8 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div>
-              <h2 className="font-display uppercase text-lg mb-4 text-brand-gold">Pagamento</h2>
-              <p className="text-xs text-brand-gray mb-3">
+              <h2 className="break-words font-display uppercase text-lg mb-4 text-brand-gold">Pagamento</h2>
+              <p className="break-words text-xs text-brand-gray mb-3">
                 Simulação. Nenhuma cobrança é feita de verdade.
               </p>
               <div className="grid md:grid-cols-2 gap-4">
@@ -108,30 +108,30 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <aside className="bg-brand-black-2 border border-brand-border rounded-sm p-6 h-fit">
-            <h2 className="font-display uppercase text-lg mb-4">Resumo do pedido</h2>
+          <aside className="min-w-0 bg-brand-black-2 border border-brand-border rounded-sm p-4 sm:p-6 h-fit">
+            <h2 className="break-words font-display uppercase text-lg mb-4">Resumo do pedido</h2>
             <ul className="divide-y divide-brand-border text-sm mb-4">
               {items.map((it) => (
                 <li
                   key={`${it.productId}-${it.size}`}
-                  className="py-2 flex justify-between gap-2"
+                  className="py-2 flex min-w-0 justify-between gap-3"
                 >
-                  <span>
+                  <span className="min-w-0 break-words">
                     {it.name} <span className="text-brand-gray">({it.size}) ×{it.quantity}</span>
                   </span>
-                  <span>{formatCurrency(it.price * it.quantity)}</span>
+                  <span className="shrink-0">{formatCurrency(it.price * it.quantity)}</span>
                 </li>
               ))}
             </ul>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between gap-3 text-sm">
               <span className="text-brand-gray">Subtotal</span>
               <span>{formatCurrency(subtotal())}</span>
             </div>
-            <div className="flex justify-between text-sm mt-1">
+            <div className="flex justify-between gap-3 text-sm mt-1">
               <span className="text-brand-gray">Frete</span>
               <span>{formatCurrency(shipping)}</span>
             </div>
-            <div className="flex justify-between font-display text-xl border-t border-brand-border pt-3 mt-3">
+            <div className="flex justify-between gap-3 font-display text-xl border-t border-brand-border pt-3 mt-3">
               <span>Total</span>
               <span className="text-brand-gold">{formatCurrency(subtotal() + shipping)}</span>
             </div>
