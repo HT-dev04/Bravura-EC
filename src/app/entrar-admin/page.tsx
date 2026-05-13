@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { bravuraLogo } from "@/lib/asset-url";
+import { avontzLogo, bravuraLogo } from "@/lib/asset-url";
 
 export default function EntrarAdminPage() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function EntrarAdminPage() {
 
     const res = await fetch("/api/admin/login", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
@@ -90,6 +91,19 @@ export default function EntrarAdminPage() {
         <Button asChild type="button" variant="outline" className="w-full">
           <Link href="/">Voltar para o site</Link>
         </Button>
+
+        <div className="border-t border-brand-border pt-4 text-center">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-brand-gray">Sistema desenvolvido por</p>
+          <div className="mx-auto max-w-32">
+            <Image
+              src={avontzLogo}
+              alt="Avontz Soluções Tecnológicas"
+              width={128}
+              height={30}
+              className="h-auto w-full opacity-90"
+            />
+          </div>
+        </div>
       </form>
     </main>
   );

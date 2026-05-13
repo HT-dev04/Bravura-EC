@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import type { GalleryPhoto, GalleryAlbum } from "@/types";
 
 function makeUniqueGalleryRows(items: GalleryPhoto[]) {
@@ -18,7 +19,7 @@ function makeUniqueGalleryRows(items: GalleryPhoto[]) {
       return item;
     }
 
-    const unique = { ...item, id: `${item.id}-${Date.now()}-${seen.size}` };
+    const unique = { ...item, id: createAdminId(`${item.id}-`) };
     seen.add(unique.id);
     return unique;
   });
@@ -34,7 +35,7 @@ export default function AdminGaleriaPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const gallery = data?.data?.gallery || data?.gallery;
@@ -59,7 +60,7 @@ export default function AdminGaleriaPage() {
   function handleNew() {
     clearLocalPreview();
     setEditing({
-      id: `g${Date.now()}`,
+      id: createAdminId("g"),
       src: "",
       mediaType: "image",
       album: "Jogos",

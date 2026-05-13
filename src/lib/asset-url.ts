@@ -10,3 +10,4 @@ export function assetUrl(path: string) {
 }
 
 export const bravuraLogo = "/bravura-logo.svg";
+export const avontzLogo = "/avontz-logo-dark.svg";

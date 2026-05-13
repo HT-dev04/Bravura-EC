@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import type { NewsItem } from "@/types";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import { formatDate, slugify } from "@/lib/utils";
 
 export default function AdminNoticiasPage() {
@@ -19,14 +20,14 @@ export default function AdminNoticiasPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.news && setRows(data.news));
   }, []);
 
   function handleNew() {
     setEditing({
-      id: `n${Date.now()}`,
+      id: createAdminId("n"),
       slug: "",
       title: "",
       excerpt: "",

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import type { Sponsor } from "@/types";
 
 export default function AdminPatrocinadoresPage() {
@@ -17,7 +18,7 @@ export default function AdminPatrocinadoresPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.sponsors && setRows(data.sponsors));
   }, []);
@@ -30,7 +31,7 @@ export default function AdminPatrocinadoresPage() {
   }
 
   function handleNew() {
-    setEditing({ id: `s${Date.now()}`, name: "", logo: "", tier: "Bronze", website: "" });
+    setEditing({ id: createAdminId("s"), name: "", logo: "", tier: "Bronze", website: "" });
     setOpen(true);
   }
 

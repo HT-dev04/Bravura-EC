@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getAdminAuthConfigError, getAdminSession } from "@/lib/admin-auth";
 import { getCmsData, updateCmsCollection } from "@/lib/cms-store";
+import { getErrorCode, getErrorMessage, isTemporaryDatabaseError } from "@/lib/database-retry";
 import type { CmsData } from "@/types";
 
 export const runtime = "nodejs";
@@ -11,8 +12,61 @@ async function requireAdmin() {
   return Boolean(await getAdminSession());
 }
 
-function errorResponse(error: string, status = 400) {
-  return NextResponse.json({ success: false, error }, { status });
+function errorResponse(error: string, status = 400, message?: string) {
+  return NextResponse.json({ success: false, error, ...(message ? { message } : {}) }, { status });
+}
+
+function unauthorizedResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "UNAUTHORIZED",
+      message: "Não autorizado. Faça login novamente no painel admin.",
+    },
+    { status: 401 }
+  );
+}
+
+function adminConfigErrorResponse() {
+  const message = getAdminAuthConfigError();
+  return message ? errorResponse("ADMIN_CONFIG_ERROR", 500, message) : null;
+}
+
+function databaseUnavailableResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "DATABASE_TEMPORARILY_UNAVAILABLE",
+      message: "Não foi possível conectar ao banco de dados agora. Tente novamente em alguns segundos.",
+    },
+    { status: 503 }
+  );
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return getErrorCode(error) === "P2002" || getErrorMessage(error).includes("Unique constraint failed");
+}
+
+function uniqueConstraintResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "UNIQUE_CONSTRAINT_FAILED",
+      message: "Já existe um registro com este ID. O salvamento precisa atualizar o registro existente em vez de criar outro.",
+    },
+    { status: 409 }
+  );
+}
+
+function logApiError(context: string, error: unknown) {
+  const details = {
+    message: getErrorMessage(error),
+    code: getErrorCode(error),
+    temporary: isTemporaryDatabaseError(error),
+    ...(process.env.NODE_ENV === "development" && error instanceof Error ? { stack: error.stack } : {}),
+  };
+
+  console.error(context, details);
 }
 
 function validateRows(collection: keyof CmsData, rows: CmsData[keyof CmsData]) {
@@ -27,13 +81,23 @@ function validateRows(collection: keyof CmsData, rows: CmsData[keyof CmsData]) {
 }
 
 export async function GET() {
-  if (!(await requireAdmin())) return errorResponse("Não autorizado", 401);
-  const data = await getCmsData();
-  return NextResponse.json({ success: true, data, ...data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  const configError = adminConfigErrorResponse();
+  if (configError) return configError;
+  if (!(await requireAdmin())) return unauthorizedResponse();
+  try {
+    const data = await getCmsData();
+    return NextResponse.json({ success: true, data, ...data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  } catch (error) {
+    logApiError("Erro ao carregar /api/admin/cms", error);
+    if (isTemporaryDatabaseError(error)) return databaseUnavailableResponse();
+    return errorResponse("Erro ao carregar dados", 500);
+  }
 }
 
 export async function PUT(request: Request) {
-  if (!(await requireAdmin())) return errorResponse("Não autorizado", 401);
+  const configError = adminConfigErrorResponse();
+  if (configError) return configError;
+  if (!(await requireAdmin())) return unauthorizedResponse();
 
   try {
     const { collection, rows } = await request.json();
@@ -44,7 +108,7 @@ export async function PUT(request: Request) {
     const validationError = validateRows(collection as keyof CmsData, rows);
     if (validationError) return errorResponse(validationError);
 
-    if (collection === "players") {
+    if (collection === "players" && process.env.NODE_ENV === "development") {
       console.info("API /api/admin/cms recebeu jogadores", {
         ids: Array.isArray(rows) ? rows.map((row) => row.id) : [],
         count: Array.isArray(rows) ? rows.length : 0,
@@ -52,7 +116,7 @@ export async function PUT(request: Request) {
     }
 
     const data = await updateCmsCollection(collection as keyof CmsData, rows);
-    if (collection === "players") {
+    if (collection === "players" && process.env.NODE_ENV === "development") {
       console.info("API /api/admin/cms retornando jogadores após salvar", {
         ids: data.players.map((player) => player.id),
         count: data.players.length,
@@ -60,9 +124,9 @@ export async function PUT(request: Request) {
     }
     return NextResponse.json({ success: true, data, ...data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
-    console.error("Erro na API /api/admin/cms", {
-      message: error instanceof Error ? error.message : String(error),
-    });
-    return errorResponse(error instanceof Error ? error.message : "Erro ao salvar dados", 500);
+    logApiError("Erro ao salvar /api/admin/cms", error);
+    if (isUniqueConstraintError(error)) return uniqueConstraintResponse();
+    if (isTemporaryDatabaseError(error)) return databaseUnavailableResponse();
+    return errorResponse("Erro ao salvar dados", 500, process.env.NODE_ENV === "development" ? getErrorMessage(error) : undefined);
   }
 }

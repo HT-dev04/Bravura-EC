@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import { slugify } from "@/lib/utils";
 import type { Player, Position } from "@/types";
 
@@ -21,14 +22,14 @@ export default function AdminJogadoresPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.players && setRows(data.players));
   }, []);
 
   function handleNew() {
     setEditing({
-      id: `p${Date.now()}`,
+      id: createAdminId("p"),
       slug: "",
       name: "",
       nickname: "",

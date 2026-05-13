@@ -5,6 +5,25 @@ import { cookies } from "next/headers";
 
 const COOKIE_NAME = "bravura_admin";
 
+type AdminAuthConfigOptions = {
+  requireCredentials?: boolean;
+};
+
+export function getAdminAuthConfigError({ requireCredentials = false }: AdminAuthConfigOptions = {}) {
+  const missing: string[] = [];
+
+  if (requireCredentials) {
+    if (!process.env.ADMIN_EMAIL) missing.push("ADMIN_EMAIL");
+    if (!process.env.ADMIN_PASSWORD) missing.push("ADMIN_PASSWORD");
+  }
+
+  if (process.env.NODE_ENV === "production" && !process.env.ADMIN_SESSION_SECRET) {
+    missing.push("ADMIN_SESSION_SECRET");
+  }
+
+  return missing.length ? `Configuração do admin incompleta. Defina: ${missing.join(", ")}.` : null;
+}
+
 function secret() {
   return process.env.ADMIN_SESSION_SECRET || "dev-only-bravura-secret";
 }

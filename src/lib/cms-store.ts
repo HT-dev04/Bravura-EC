@@ -2,6 +2,7 @@ import "server-only";
 
 import { connection } from "next/server";
 import { assetUrl } from "@/lib/asset-url";
+import { withDatabaseRetry } from "@/lib/database-retry";
 import { prisma } from "@/lib/prisma";
 import type {
   CmsData,
@@ -321,6 +322,16 @@ function sanitizeGallery(items: GalleryPhoto[]) {
   return Array.from(galleryRows.values());
 }
 
+function withoutId<T extends { id: string }>(row: T) {
+  const { id: _id, ...data } = row;
+  void _id;
+  return data;
+}
+
+function rowIds(rows: Array<{ id: string }>) {
+  return rows.map((row) => row.id).filter(Boolean);
+}
+
 function assertPrismaDelegate(delegate: keyof typeof prisma, modelName: string, methods: string[]) {
   const model = prisma[delegate] as Record<string, unknown> | undefined;
 
@@ -339,19 +350,19 @@ function assertPrismaDelegate(delegate: keyof typeof prisma, modelName: string, 
 
 function assertCmsPrismaDelegates() {
   assertPrismaDelegate("cmsMetadata", "CmsMetadata", ["findUnique", "upsert"]);
-  assertPrismaDelegate("player", "Player", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("match", "Match", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("newsItem", "NewsItem", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("galleryPhoto", "GalleryPhoto", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("product", "Product", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("sponsor", "Sponsor", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("order", "Order", ["findMany", "deleteMany", "createMany"]);
+  assertPrismaDelegate("player", "Player", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("match", "Match", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("newsItem", "NewsItem", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("galleryPhoto", "GalleryPhoto", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("product", "Product", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("sponsor", "Sponsor", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("order", "Order", ["findMany", "deleteMany", "upsert"]);
   assertPrismaDelegate("teamStats", "TeamStats", ["findUnique", "upsert"]);
   assertPrismaDelegate("financeSettings", "FinanceSettings", ["findUnique", "upsert"]);
-  assertPrismaDelegate("monthlyPayment", "MonthlyPayment", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("revenueEntry", "RevenueEntry", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("expenseEntry", "ExpenseEntry", ["findMany", "deleteMany", "createMany"]);
-  assertPrismaDelegate("sponsorshipEntry", "SponsorshipEntry", ["findMany", "deleteMany", "createMany"]);
+  assertPrismaDelegate("monthlyPayment", "MonthlyPayment", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("revenueEntry", "RevenueEntry", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("expenseEntry", "ExpenseEntry", ["findMany", "deleteMany", "upsert"]);
+  assertPrismaDelegate("sponsorshipEntry", "SponsorshipEntry", ["findMany", "deleteMany", "upsert"]);
 }
 
 export async function getCmsData(): Promise<CmsData> {
@@ -372,39 +383,39 @@ export async function getCmsData(): Promise<CmsData> {
     revenues,
     expenses,
     sponsorships,
-  // These reads are independent; using a transaction here can exhaust pooled
-  // connections and trigger P2028 while waiting to start the transaction.
-  ] = await Promise.all([
-    prisma.player.findMany({ orderBy: { number: "asc" } }),
-    prisma.match.findMany({ orderBy: { date: "desc" } }),
-    prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" }, take: CMS_READ_LIMITS.news }),
-    prisma.galleryPhoto.findMany({ orderBy: { id: "asc" }, take: CMS_READ_LIMITS.gallery }),
-    prisma.product.findMany({ orderBy: { name: "asc" }, take: CMS_READ_LIMITS.products }),
-    prisma.sponsor.findMany({ orderBy: { name: "asc" } }),
-    prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: CMS_READ_LIMITS.orders }),
-    prisma.teamStats.findUnique({ where: { id: "default" } }),
-    prisma.financeSettings.findUnique({ where: { id: "default" } }),
-    prisma.monthlyPayment.findMany({
-      orderBy: [{ month: "desc" }, { playerId: "asc" }],
-      take: CMS_READ_LIMITS.monthlyPayments,
-      select: { playerId: true, month: true, status: true, paidAt: true },
-    }),
-    prisma.revenueEntry.findMany({
-      orderBy: { date: "desc" },
-      take: CMS_READ_LIMITS.revenues,
-      select: { id: true, date: true, description: true, value: true },
-    }),
-    prisma.expenseEntry.findMany({
-      orderBy: { date: "desc" },
-      take: CMS_READ_LIMITS.expenses,
-      select: { id: true, date: true, description: true, value: true },
-    }),
-    prisma.sponsorshipEntry.findMany({
-      orderBy: { date: "desc" },
-      take: CMS_READ_LIMITS.sponsorships,
-      select: { id: true, date: true, name: true, photo: true, purpose: true, value: true },
-    }),
-  ]);
+  ] = await withDatabaseRetry(async () =>
+    Promise.all([
+      prisma.player.findMany({ orderBy: { number: "asc" } }),
+      prisma.match.findMany({ orderBy: { date: "desc" } }),
+      prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" }, take: CMS_READ_LIMITS.news }),
+      prisma.galleryPhoto.findMany({ orderBy: { id: "asc" }, take: CMS_READ_LIMITS.gallery }),
+      prisma.product.findMany({ orderBy: { name: "asc" }, take: CMS_READ_LIMITS.products }),
+      prisma.sponsor.findMany({ orderBy: { name: "asc" } }),
+      prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: CMS_READ_LIMITS.orders }),
+      prisma.teamStats.findUnique({ where: { id: "default" } }),
+      prisma.financeSettings.findUnique({ where: { id: "default" } }),
+      prisma.monthlyPayment.findMany({
+        orderBy: [{ month: "desc" }, { playerId: "asc" }],
+        take: CMS_READ_LIMITS.monthlyPayments,
+        select: { playerId: true, month: true, status: true, paidAt: true },
+      }),
+      prisma.revenueEntry.findMany({
+        orderBy: { date: "desc" },
+        take: CMS_READ_LIMITS.revenues,
+        select: { id: true, date: true, description: true, value: true },
+      }),
+      prisma.expenseEntry.findMany({
+        orderBy: { date: "desc" },
+        take: CMS_READ_LIMITS.expenses,
+        select: { id: true, date: true, description: true, value: true },
+      }),
+      prisma.sponsorshipEntry.findMany({
+        orderBy: { date: "desc" },
+        take: CMS_READ_LIMITS.sponsorships,
+        select: { id: true, date: true, name: true, photo: true, purpose: true, value: true },
+      }),
+    ])
+  );
 
   return {
     players: playerRows.map(fromPlayer),
@@ -431,22 +442,10 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
       await prisma.$transaction(
         async (tx) => {
           const playerRows = (rows as Player[]).map(toPlayer);
-          const before = await tx.player.findMany({ select: { id: true } });
-          console.info("Persistindo jogadores", {
-            beforeIds: before.map((player) => player.id),
-            nextIds: playerRows.map((player) => player.id),
-            beforeCount: before.length,
-            nextCount: playerRows.length,
-          });
-
-          await tx.player.deleteMany();
-          if (playerRows.length) await tx.player.createMany({ data: playerRows });
-
-          const after = await tx.player.findMany({ select: { id: true } });
-          console.info("Jogadores persistidos", {
-            afterIds: after.map((player) => player.id),
-            afterCount: after.length,
-          });
+          await tx.player.deleteMany({ where: { id: { notIn: rowIds(playerRows) } } });
+          for (const player of playerRows) {
+            await tx.player.upsert({ where: { id: player.id }, update: withoutId(player), create: player });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -455,8 +454,10 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
       await prisma.$transaction(
         async (tx) => {
           const matchRows = (rows as Match[]).map(toMatch);
-          await tx.match.deleteMany();
-          if (matchRows.length) await tx.match.createMany({ data: matchRows });
+          await tx.match.deleteMany({ where: { id: { notIn: rowIds(matchRows) } } });
+          for (const match of matchRows) {
+            await tx.match.upsert({ where: { id: match.id }, update: withoutId(match), create: match });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -465,8 +466,10 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
       await prisma.$transaction(
         async (tx) => {
           const newsRows = rows as NewsItem[];
-          await tx.newsItem.deleteMany();
-          if (newsRows.length) await tx.newsItem.createMany({ data: newsRows });
+          await tx.newsItem.deleteMany({ where: { id: { notIn: rowIds(newsRows) } } });
+          for (const item of newsRows) {
+            await tx.newsItem.upsert({ where: { id: item.id }, update: withoutId(item), create: item });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -475,8 +478,10 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
       await prisma.$transaction(
         async (tx) => {
           const galleryRows = sanitizeGallery(rows as GalleryPhoto[]);
-          await tx.galleryPhoto.deleteMany();
-          if (galleryRows.length) await tx.galleryPhoto.createMany({ data: galleryRows });
+          await tx.galleryPhoto.deleteMany({ where: { id: { notIn: rowIds(galleryRows) } } });
+          for (const item of galleryRows) {
+            await tx.galleryPhoto.upsert({ where: { id: item.id }, update: withoutId(item), create: item });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -484,16 +489,20 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
     case "products":
       await prisma.$transaction(async (tx) => {
         const productRows = (rows as Product[]).map(toProduct);
-        await tx.product.deleteMany();
-        if (productRows.length) await tx.product.createMany({ data: productRows });
+        await tx.product.deleteMany({ where: { id: { notIn: rowIds(productRows) } } });
+        for (const product of productRows) {
+          await tx.product.upsert({ where: { id: product.id }, update: withoutId(product), create: product });
+        }
       });
       break;
     case "sponsors":
       await prisma.$transaction(
         async (tx) => {
           const sponsorRows = rows as Sponsor[];
-          await tx.sponsor.deleteMany();
-          if (sponsorRows.length) await tx.sponsor.createMany({ data: sponsorRows });
+          await tx.sponsor.deleteMany({ where: { id: { notIn: rowIds(sponsorRows) } } });
+          for (const sponsor of sponsorRows) {
+            await tx.sponsor.upsert({ where: { id: sponsor.id }, update: withoutId(sponsor), create: sponsor });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -502,8 +511,10 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
       await prisma.$transaction(
         async (tx) => {
           const orderRows = (rows as Order[]).map(toOrder);
-          await tx.order.deleteMany();
-          if (orderRows.length) await tx.order.createMany({ data: orderRows });
+          await tx.order.deleteMany({ where: { id: { notIn: rowIds(orderRows) } } });
+          for (const order of orderRows) {
+            await tx.order.upsert({ where: { id: order.id }, update: withoutId(order), create: order });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -521,17 +532,33 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
             create: { id: "default", monthlyFeeAmount: finance.monthlyFeeAmount },
           });
 
-          await tx.monthlyPayment.deleteMany();
-          if (finance.monthlyPayments.length) await tx.monthlyPayment.createMany({ data: finance.monthlyPayments });
+          await tx.monthlyPayment.deleteMany({
+            where: finance.monthlyPayments.length
+              ? { NOT: { OR: finance.monthlyPayments.map((item) => ({ playerId: item.playerId, month: item.month })) } }
+              : undefined,
+          });
+          for (const payment of finance.monthlyPayments) {
+            await tx.monthlyPayment.upsert({
+              where: { playerId_month: { playerId: payment.playerId, month: payment.month } },
+              update: { status: payment.status, paidAt: payment.paidAt ?? null },
+              create: payment,
+            });
+          }
 
-          await tx.revenueEntry.deleteMany();
-          if (finance.revenues.length) await tx.revenueEntry.createMany({ data: finance.revenues });
+          await tx.revenueEntry.deleteMany({ where: { id: { notIn: rowIds(finance.revenues) } } });
+          for (const revenue of finance.revenues) {
+            await tx.revenueEntry.upsert({ where: { id: revenue.id }, update: withoutId(revenue), create: revenue });
+          }
 
-          await tx.expenseEntry.deleteMany();
-          if (finance.expenses.length) await tx.expenseEntry.createMany({ data: finance.expenses });
+          await tx.expenseEntry.deleteMany({ where: { id: { notIn: rowIds(finance.expenses) } } });
+          for (const expense of finance.expenses) {
+            await tx.expenseEntry.upsert({ where: { id: expense.id }, update: withoutId(expense), create: expense });
+          }
 
-          await tx.sponsorshipEntry.deleteMany();
-          if (finance.sponsorships.length) await tx.sponsorshipEntry.createMany({ data: finance.sponsorships });
+          await tx.sponsorshipEntry.deleteMany({ where: { id: { notIn: rowIds(finance.sponsorships) } } });
+          for (const sponsorship of finance.sponsorships) {
+            await tx.sponsorshipEntry.upsert({ where: { id: sponsorship.id }, update: withoutId(sponsorship), create: sponsorship });
+          }
         },
         { maxWait: 10000, timeout: 30000 }
       );
@@ -542,7 +569,7 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
 
 export async function updateCmsCollection<K extends keyof CmsData>(collection: K, rows: CmsData[K]) {
   assertCmsPrismaDelegates();
-  await replaceCollection(collection, rows);
+  await withDatabaseRetry(() => replaceCollection(collection, rows));
   const data = await getCmsData();
 
   if (collection === "players") {

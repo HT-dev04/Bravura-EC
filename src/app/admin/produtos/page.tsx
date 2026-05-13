@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import type { Product, ProductCategory } from "@/types";
 import { formatCurrency, slugify } from "@/lib/utils";
 
@@ -18,7 +19,7 @@ export default function AdminProdutosPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.products && setRows(data.products));
   }, []);
@@ -30,7 +31,7 @@ export default function AdminProdutosPage() {
 
   function handleNew() {
     setEditing({
-      id: `pr${Date.now()}`,
+      id: createAdminId("pr"),
       slug: "",
       name: "",
       category: "uniformes-jogo",

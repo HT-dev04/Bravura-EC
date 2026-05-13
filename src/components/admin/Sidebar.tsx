@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { bravuraLogo } from "@/lib/asset-url";
+import { avontzLogo, bravuraLogo } from "@/lib/asset-url";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -106,6 +106,10 @@ export function Sidebar() {
           />
           Voltar ao site
         </Link>
+        <div className="mt-3 border-t border-brand-border pt-3">
+          <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-brand-gray">Desenvolvedor</p>
+          <Image src={avontzLogo} alt="Avontz Soluções Tecnológicas" width={112} height={26} className="h-auto w-28 opacity-90" />
+        </div>
       </div>
     </>
   );
@@ -200,6 +204,10 @@ export function Sidebar() {
             <Image src={bravuraLogo} alt="Bravura EC" width={16} height={16} className="h-4 w-4 object-contain shrink-0" />
             Voltar ao site
           </Link>
+          <div className="mt-3 border-t border-brand-border pt-3">
+            <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-brand-gray">Desenvolvedor</p>
+            <Image src={avontzLogo} alt="Avontz Soluções Tecnológicas" width={112} height={26} className="h-auto w-28 opacity-90" />
+          </div>
         </div>
       </aside>
 

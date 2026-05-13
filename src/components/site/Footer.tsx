@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Camera, Mail, MapPin, Phone } from "lucide-react";
 import { clubInfo } from "@/data/club";
-import { bravuraLogo } from "@/lib/asset-url";
+import { avontzLogo, bravuraLogo } from "@/lib/asset-url";
 
 export function Footer() {
   return (
@@ -74,6 +74,19 @@ export function Footer() {
               </a>
             </li>
           </ul>
+        </div>
+      </div>
+
+      <div className="border-t border-brand-border bg-brand-black-2/40">
+        <div className="container-x py-4 flex flex-col items-center justify-center gap-2 text-center">
+          <p className="break-words text-[10px] font-semibold uppercase tracking-[0.25em] text-brand-gray">Sistema desenvolvido por</p>
+          <Image
+            src={avontzLogo}
+            alt="Avontz Soluções Tecnológicas"
+            width={120}
+            height={28}
+            className="h-auto w-28 opacity-95"
+          />
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type {
   FinanceData,
@@ -45,16 +46,16 @@ function today() {
 }
 
 function makeRevenue(): RevenueEntry {
-  return { id: `rev${Date.now()}`, date: today(), description: "", value: 0 };
+  return { id: createAdminId("rev"), date: today(), description: "", value: 0 };
 }
 
 function makeExpense(): ExpenseEntry {
-  return { id: `gas${Date.now()}`, date: today(), description: "", value: 0 };
+  return { id: createAdminId("gas"), date: today(), description: "", value: 0 };
 }
 
 function makeSponsorship(): SponsorshipEntry {
   return {
-    id: `pat${Date.now()}`,
+    id: createAdminId("pat"),
     date: today(),
     name: "",
     photo: "",
@@ -85,7 +86,7 @@ export default function AdminFinanceiroPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const cms = data?.data || data;

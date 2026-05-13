@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
+import { createAdminId } from "@/lib/admin-id";
 import type { Match, MatchEvent, Player } from "@/types";
 import { dateTimeLocalToIso, formatDate, formatDateTimeLocalInput } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ export default function AdminPartidasPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/cms", { cache: "no-store" })
+    fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.matches) setRows(data.matches);
@@ -30,7 +31,7 @@ export default function AdminPartidasPage() {
 
   function handleNew() {
     setEditing({
-      id: `m${Date.now()}`,
+      id: createAdminId("m"),
       opponent: "",
       opponentLogo: "",
       date: new Date().toISOString(),
