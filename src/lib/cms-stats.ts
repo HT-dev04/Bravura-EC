@@ -7,22 +7,22 @@ export function getTeamStats(matches: Match[]): TeamStatsSummary {
   const losses = finished.filter((m) => m.result === "D").length;
   const goalsFor = finished.reduce((sum, m) => {
     if (m.scoreHome === null || m.scoreAway === null) return sum;
-    return sum + (m.homeAway === "casa" ? m.scoreHome : m.scoreAway);
+    return sum + m.scoreHome;
   }, 0);
   const goalsAgainst = finished.reduce((sum, m) => {
     if (m.scoreHome === null || m.scoreAway === null) return sum;
-    return sum + (m.homeAway === "casa" ? m.scoreAway : m.scoreHome);
+    return sum + m.scoreAway;
   }, 0);
   const cleanSheets = finished.filter((m) => {
     if (m.scoreHome === null || m.scoreAway === null) return false;
-    return (m.homeAway === "casa" ? m.scoreAway : m.scoreHome) === 0;
+    return m.scoreAway === 0;
   }).length;
 
   const goalsByMonth = finished.reduce<Array<{ month: string; goals: number }>>((acc, m) => {
     if (m.scoreHome === null || m.scoreAway === null) return acc;
     const month = new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(m.date)).replace(".", "");
     const row = acc.find((x) => x.month === month);
-    const goals = m.homeAway === "casa" ? m.scoreHome : m.scoreAway;
+    const goals = m.scoreHome;
     if (row) row.goals += goals;
     else acc.push({ month, goals });
     return acc;

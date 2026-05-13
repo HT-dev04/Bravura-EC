@@ -275,7 +275,7 @@ export default function AdminPartidasPage() {
                 </Select>
               </div>
               <div>
-                <Label>Placar casa</Label>
+                <Label>Gols Bravura</Label>
                 <Input
                   type="number"
                   className="mt-1"
@@ -289,7 +289,7 @@ export default function AdminPartidasPage() {
                 />
               </div>
               <div>
-                <Label>Placar fora</Label>
+                <Label>Gols adversário</Label>
                 <Input
                   type="number"
                   className="mt-1"

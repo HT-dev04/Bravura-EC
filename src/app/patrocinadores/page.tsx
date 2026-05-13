@@ -19,17 +19,16 @@ export const metadata: Metadata = {
 const plans = [
   {
     tier: "Bronze",
-    price: "R$ 500/mês",
+    price: "R$ 50/mês",
     color: "#cd7f32",
     perks: [
       "Logo no site oficial",
       "Menção nas redes sociais",
-      "Presença no escudo de treino",
     ],
   },
   {
     tier: "Prata",
-    price: "R$ 1.500/mês",
+    price: "R$ 120/mês",
     color: "#c0c0c0",
     perks: [
       "Tudo do Bronze",
@@ -40,7 +39,7 @@ const plans = [
   },
   {
     tier: "Ouro",
-    price: "R$ 4.000/mês",
+    price: "R$ 250/mês",
     color: "#d4af37",
     perks: [
       "Tudo do Prata",

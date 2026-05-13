@@ -14,6 +14,7 @@ import { bravuraLogo } from "@/lib/asset-url";
 import { getValidImageSrc } from "@/lib/image-utils";
 import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
 import { formatDateLong, formatTime } from "@/lib/utils";
+import type { Match, Player } from "@/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -89,50 +90,7 @@ export default async function HomePage() {
               Próximo jogo
             </div>
             {next ? (
-              <div>
-                <div className="flex items-center justify-between gap-3 sm:gap-4 mb-4">
-                  <Image
-                    src={bravuraLogo}
-                    alt="Bravura Futebol Clube"
-                    width={60}
-                    height={60}
-                    className="h-[60px] w-[60px] object-contain"
-                  />
-                  <div className="text-center">
-                    <p className="font-display text-2xl uppercase">VS</p>
-                    <p className="text-brand-gold text-xs">{next.competition}</p>
-                  </div>
-                  {getValidImageSrc(next.opponentLogo) ? (
-                    <Image
-                      src={getValidImageSrc(next.opponentLogo)!}
-                      alt={next.opponent}
-                      width={60}
-                      height={60}
-                      className="h-14 w-14 object-contain"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 bg-brand-black rounded-sm" />
-                  )}
-                </div>
-                <h3 className="break-words font-display text-2xl uppercase mb-2">
-                  Bravura × {next.opponent}
-                </h3>
-                <div className="text-sm text-brand-white/80 space-y-1 mb-4">
-                  <p className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-brand-red" />
-                    {formatDateLong(next.date)} · {formatTime(next.date)}
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-brand-red" />
-                    <span className="min-w-0 break-words">{next.location}</span>
-                  </p>
-                </div>
-                <Link href={`/jogos/${next.id}`}>
-                  <Button variant="primary" size="sm">
-                    Detalhes da partida
-                  </Button>
-                </Link>
-              </div>
+              <HomeMatchSummaryCard match={next} actionLabel="Detalhes da partida" />
             ) : (
               <p className="text-brand-gray text-sm">Nenhum jogo agendado no momento.</p>
             )}
@@ -144,45 +102,11 @@ export default async function HomePage() {
               Último resultado
             </div>
             {last && (
-              <div>
-                <div className="flex items-center justify-between gap-3 sm:gap-4 mb-4">
-                  <div className="min-w-0 text-center flex-1">
-                    <Image
-                      src={bravuraLogo}
-                      alt="Bravura Futebol Clube"
-                      width={60}
-                      height={60}
-                      className="mx-auto h-[60px] w-[60px] object-contain"
-                    />
-                    <p className="text-xs mt-1 text-brand-gray uppercase">Bravura</p>
-                  </div>
-                  <div className="shrink-0 font-display text-3xl sm:text-4xl md:text-5xl font-bold">
-                    {last.scoreHome} × {last.scoreAway}
-                  </div>
-                  <div className="min-w-0 text-center flex-1">
-                    {getValidImageSrc(last.opponentLogo) ? (
-                      <Image
-                        src={getValidImageSrc(last.opponentLogo)!}
-                        alt={last.opponent}
-                        width={60}
-                        height={60}
-                        className="h-14 w-14 mx-auto object-contain"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 mx-auto bg-brand-black rounded-sm" />
-                    )}
-                    <p className="text-xs mt-1 text-brand-gray uppercase truncate">{last.opponent}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-brand-gray mb-4">
-                  {formatDateLong(last.date)} · {last.competition}
-                </p>
-                <Link href={`/jogos/${last.id}`}>
-                  <Button variant="outline" size="sm">
-                    Ver resumo
-                  </Button>
-                </Link>
-              </div>
+              <HomeMatchSummaryCard
+                match={last}
+                actionLabel="Ver resumo"
+                highlight={players.find((player) => player.id === last.highlightPlayerId)}
+              />
             )}
           </div>
         </div>
@@ -311,6 +235,99 @@ export default async function HomePage() {
         </div>
       </section>
     </SiteShell>
+  );
+}
+
+function HomeMatchSummaryCard({
+  match,
+  actionLabel,
+  highlight,
+}: {
+  match: Match;
+  actionLabel: string;
+  highlight?: Player;
+}) {
+  const opponentLogo = getValidImageSrc(match.opponentLogo);
+  const highlightPhoto = getValidImageSrc(match.highlightPhoto) || getValidImageSrc(highlight?.photo);
+  const showHighlight = match.status === "encerrada" && (highlight || highlightPhoto || match.highlightQuote);
+
+  return (
+    <div className="overflow-hidden rounded-sm border border-brand-border bg-[radial-gradient(circle_at_top,rgba(200,16,46,0.16),transparent_42%)]">
+      <div className="flex items-center justify-between gap-3 border-b border-brand-border px-4 py-2 text-xs">
+        <div className="min-w-0">
+          <span className="block break-words uppercase tracking-wider text-brand-gray">{match.competition}</span>
+          <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-white/40">{match.homeAway === "casa" ? "Casa" : "Fora"}</span>
+        </div>
+        <span className="rounded-full border border-brand-gold/50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-gold">
+          {match.status === "encerrada" ? "Encerrada" : "Agendada"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 p-4 sm:p-5">
+        <div className="min-w-0 text-center">
+          <Image src={bravuraLogo} alt="Bravura Futebol Clube" width={60} height={60} className="mx-auto h-[60px] w-[60px] object-contain" />
+          <p className="mt-1 truncate text-xs uppercase text-brand-gray">Bravura</p>
+        </div>
+        <div className="shrink-0 text-center">
+          {match.status === "encerrada" ? (
+            <div className="font-display text-3xl font-bold sm:text-4xl md:text-5xl">
+              {match.scoreHome} <span className="text-brand-gray">×</span> {match.scoreAway}
+            </div>
+          ) : (
+            <div>
+              <p className="font-display text-2xl uppercase">VS</p>
+              <p className="text-[10px] uppercase tracking-widest text-brand-gold">{formatTime(match.date)}</p>
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 text-center">
+          {opponentLogo ? (
+            <Image src={opponentLogo} alt={match.opponent} width={60} height={60} className="mx-auto h-14 w-14 object-contain" />
+          ) : (
+            <div className="mx-auto h-14 w-14 rounded-sm bg-brand-black" />
+          )}
+          <p className="mt-1 truncate text-xs uppercase text-brand-gray">{match.opponent}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2 px-4 pb-4 text-sm text-brand-white/80">
+        <p className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-brand-red" />
+          {formatDateLong(match.date)} · {formatTime(match.date)}
+        </p>
+        <p className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-brand-red" />
+          <span className="min-w-0 break-words">{match.location}</span>
+        </p>
+      </div>
+
+      {showHighlight && (
+        <div className="border-t border-brand-border/80 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3 rounded-sm border border-brand-gold/40 bg-brand-black/55 p-3">
+            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-sm border border-brand-gold/50 bg-brand-black">
+              {highlightPhoto ? (
+                <Image src={highlightPhoto} alt={highlight?.name || "Craque do jogo"} fill sizes="56px" className="object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center font-display text-lg text-brand-gold/60">*</div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Craque do jogo</p>
+              <p className="truncate font-display text-xl uppercase leading-tight">{highlight?.nickname || highlight?.name || "Destaque da partida"}</p>
+              {match.highlightQuote && <p className="mt-1 line-clamp-2 break-words text-xs italic text-brand-gray">&ldquo;{match.highlightQuote}&rdquo;</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 pb-4">
+        <Link href={`/jogos/${match.id}`}>
+          <Button variant={match.status === "encerrada" ? "outline" : "primary"} size="sm">
+            {actionLabel}
+          </Button>
+        </Link>
+      </div>
+    </div>
   );
 }
 
