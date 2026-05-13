@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Calendar, MapPin, Trophy } from "lucide-react";
+import { ArrowRight, Calendar, Gamepad2, Handshake, MapPin, Sparkles, Trophy } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
 import { MatchCard } from "@/components/site/MatchCard";
@@ -37,7 +37,8 @@ export default async function HomePage() {
   const latestNews = news.slice(0, 3);
   const homeGallery = gallery.slice(0, 6);
   const teamStats = getTeamStats(matches);
-  const { topScorers } = getPlayerRankings(players);
+  const { topScorers, topAssists, topGames } = getPlayerRankings(players);
+  const topHighlights = getTopHighlights(players, matches);
 
   return (
     <SiteShell>
@@ -125,32 +126,12 @@ export default async function HomePage() {
       </section>
 
       <section className="container-x py-14">
-        <SectionHeader eyebrow="Artilheiros" title="Quem balança a rede" />
-        <div className="bg-brand-black-2 border border-brand-border rounded-sm divide-y divide-brand-border">
-          {topScorers.map((p, i) => (
-            <Link
-              key={p.id}
-              href={`/elenco/${p.slug}`}
-              className="flex min-w-0 items-center gap-3 sm:gap-4 p-4 hover:bg-white/5 transition-colors"
-            >
-              <span className="w-8 shrink-0 font-display text-2xl text-brand-gold">{i + 1}</span>
-              <div className="relative w-12 h-12 shrink-0 rounded-full overflow-hidden bg-brand-black">
-                {getValidImageSrc(p.photo) && <Image src={getValidImageSrc(p.photo)!} alt={p.name} fill sizes="48px" className="object-cover" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="break-words font-display uppercase text-lg leading-tight">{p.nickname}</p>
-                <p className="break-words text-xs text-brand-gray">
-                  #{p.number} · {p.position}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-display text-3xl font-bold text-brand-red leading-none">
-                  {p.stats.goals}
-                </p>
-                <p className="text-[10px] uppercase text-brand-gray">gols</p>
-              </div>
-            </Link>
-          ))}
+        <SectionHeader eyebrow="Rankings" title="Destaques individuais" />
+        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
+          <RankingPanel title="Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} />
+          <RankingPanel title="Assistentes" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} />
+          <RankingPanel title="Mais jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} />
+          <RankingPanel title="Craques do jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} />
         </div>
       </section>
 
@@ -329,6 +310,69 @@ function HomeMatchSummaryCard({
       </div>
     </div>
   );
+}
+
+function RankingPanel({
+  title,
+  icon,
+  rows,
+}: {
+  title: string;
+  icon: "goals" | "assists" | "games" | "stars";
+  rows: Array<{ player: Player; value: number; label: string }>;
+}) {
+  const Icon = icon === "goals" ? Trophy : icon === "assists" ? Handshake : icon === "games" ? Gamepad2 : Sparkles;
+  const accent = icon === "goals" || icon === "stars" ? "text-brand-red" : "text-brand-gold";
+  const visibleRows = rows.filter((row) => row.value > 0).slice(0, 4);
+
+  return (
+    <div className="min-w-0 overflow-hidden rounded-sm border border-brand-border bg-brand-black-2">
+      <div className="flex items-center gap-2 border-b border-brand-border px-4 py-3">
+        <Icon className={`h-4 w-4 ${accent}`} />
+        <h3 className="font-display text-lg uppercase tracking-wide">{title}</h3>
+      </div>
+      <div className="divide-y divide-brand-border">
+        {visibleRows.length > 0 ? (
+          visibleRows.map((row, index) => (
+            <Link
+              key={row.player.id}
+              href={`/elenco/${row.player.slug}`}
+              className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-white/5"
+            >
+              <span className="w-6 shrink-0 text-center font-display text-lg text-brand-gold">{index + 1}</span>
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-brand-black">
+                {getValidImageSrc(row.player.photo) && <Image src={getValidImageSrc(row.player.photo)!} alt={row.player.name} fill sizes="40px" className="object-cover" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display uppercase leading-tight">{row.player.nickname || row.player.name}</p>
+                <p className="truncate text-[10px] uppercase text-brand-gray">#{row.player.number} · {row.player.position}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className={`font-display text-2xl font-bold leading-none ${accent}`}>{row.value}</p>
+                <p className="text-[9px] uppercase text-brand-gray">{row.label}</p>
+              </div>
+            </Link>
+          ))
+        ) : (
+          <p className="p-4 text-sm text-brand-gray">Sem dados registrados.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getTopHighlights(players: Player[], matches: Match[]) {
+  const counts = new Map<string, number>();
+
+  for (const match of matches) {
+    if (match.status !== "encerrada" || !match.highlightPlayerId) continue;
+    counts.set(match.highlightPlayerId, (counts.get(match.highlightPlayerId) || 0) + 1);
+  }
+
+  return players
+    .map((player) => ({ player, count: counts.get(player.id) || 0 }))
+    .sort((a, b) => b.count - a.count || a.player.nickname.localeCompare(b.player.nickname))
+    .slice(0, 5);
 }
 
 function SectionHeader({

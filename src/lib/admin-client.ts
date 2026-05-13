@@ -109,20 +109,40 @@ export async function uploadAdminFile(file: File) {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch("/api/admin/upload", { method: "POST", credentials: "same-origin", body: form });
-  const text = await res.text();
-  const payload = text ? safeJsonParse(text) : null;
+  let payload: AdminUploadResponse | null = null;
+
+  try {
+    payload = await res.json();
+  } catch {
+    payload = null;
+  }
 
   if (!res.ok || !payload?.url) {
-    throw new Error(payload?.error || `Falha ao enviar arquivo (HTTP ${res.status})`);
+    const message = payload?.message || payload?.error || res.statusText || `Falha ao enviar arquivo (HTTP ${res.status})`;
+    console.error("Erro ao enviar arquivo do admin:", {
+      status: res.status,
+      statusText: res.statusText,
+      message,
+      response: payload,
+    });
+    throw new Error(message);
   }
 
-  return payload as { url: string; type: "image" | "video" };
+  return payload as AdminUploadSuccessResponse;
 }
 
-function safeJsonParse(text: string) {
-  try {
-    return JSON.parse(text) as { error?: string; url?: string; type?: "image" | "video" };
-  } catch {
-    return null;
-  }
-}
+type AdminUploadSuccessResponse = {
+  success?: boolean;
+  url: string;
+  path?: string;
+  type?: "image" | "video";
+};
+
+type AdminUploadResponse = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  url?: string;
+  path?: string;
+  type?: "image" | "video";
+};

@@ -1,12 +1,32 @@
+import "server-only";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const MISSING_SUPABASE_ENV_MESSAGE = "Missing Supabase environment variables";
 
-  if (!url || !key) {
-    throw new Error("Supabase Storage não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.");
+function getRequiredSupabaseConfig() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const missing = [
+    !url ? "NEXT_PUBLIC_SUPABASE_URL" : null,
+    !key ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+  ].filter(Boolean);
+
+  if (missing.length) {
+    throw new Error(`${MISSING_SUPABASE_ENV_MESSAGE}: ${missing.join(", ")}`);
   }
+
+  try {
+    new URL(url!);
+  } catch {
+    throw new Error("Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL is invalid");
+  }
+
+  return { url: url!, key: key! };
+}
+
+export function getSupabaseAdmin() {
+  const { url, key } = getRequiredSupabaseConfig();
 
   return createClient(url, key, {
     auth: {
