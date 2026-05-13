@@ -27,6 +27,20 @@ const emptyFinance: FinanceData = {
 };
 
 const tabs = ["resumo", "mensalidades", "receitas", "gastos", "patrocinios"] as const;
+const monthOptions = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
 type Tab = (typeof tabs)[number];
 type FilterMode = "atual" | "mes" | "ano";
 type MonthlyMovement = {
@@ -43,6 +57,29 @@ function currentMonth() {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function selectedMonthPart(value: string) {
+  return value.slice(5, 7) || "01";
+}
+
+function selectedMonthYear(value: string) {
+  return value.slice(0, 4) || String(new Date().getFullYear());
+}
+
+function formatMonthReference(value: string) {
+  const monthLabel = monthOptions.find((month) => month.value === selectedMonthPart(value))?.label || value;
+  return `${monthLabel} de ${selectedMonthYear(value)}`;
+}
+
+function daysInMonth(year: string, month: string) {
+  const parsedYear = Number(year) || new Date().getFullYear();
+  const parsedMonth = Number(month) || 1;
+  return new Date(parsedYear, parsedMonth, 0).getDate();
+}
+
+function clampDay(year: string, month: string, day: string) {
+  return String(Math.min(Number(day) || 1, daysInMonth(year, month))).padStart(2, "0");
 }
 
 function makeRevenue(): RevenueEntry {
@@ -77,6 +114,7 @@ export default function AdminFinanceiroPage() {
   const [tab, setTab] = useState<Tab>("mensalidades");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth());
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const [monthlyFeeDraft, setMonthlyFeeDraft] = useState(String(emptyFinance.monthlyFeeAmount));
   const [filterMode, setFilterMode] = useState<FilterMode>("atual");
   const [editingRevenue, setEditingRevenue] = useState<RevenueEntry | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseEntry | null>(null);
@@ -91,7 +129,11 @@ export default function AdminFinanceiroPage() {
       .then((data) => {
         const cms = data?.data || data;
         if (cms?.players) setPlayers(cms.players);
-        if (cms?.finance) setFinance({ ...emptyFinance, ...cms.finance });
+        if (cms?.finance) {
+          const nextFinance = { ...emptyFinance, ...cms.finance };
+          setFinance(nextFinance);
+          setMonthlyFeeDraft(String(nextFinance.monthlyFeeAmount ?? 0));
+        }
       })
       .catch((error) => {
         console.error("Erro ao carregar dados financeiros", error);
@@ -113,6 +155,28 @@ export default function AdminFinanceiroPage() {
       console.error("Erro ao persistir financeiro", error);
       return false;
     }
+  }
+
+  async function saveMonthlyFee() {
+    const nextAmount = monthlyFeeDraft === "" ? 0 : Number(monthlyFeeDraft);
+    if (!Number.isFinite(nextAmount)) {
+      setMonthlyFeeDraft(String(finance.monthlyFeeAmount ?? 0));
+      return;
+    }
+    if (nextAmount === finance.monthlyFeeAmount) return;
+
+    setFinance((current) => ({ ...current, monthlyFeeAmount: nextAmount }));
+    await persist({ ...finance, monthlyFeeAmount: nextAmount });
+    setMonthlyFeeDraft(String(nextAmount));
+  }
+
+  function changeSelectedMonth(month: string) {
+    setSelectedMonth(`${selectedMonthYear(selectedMonth)}-${month}`);
+  }
+
+  function changeSelectedYear(year: string) {
+    setSelectedYear(year);
+    if (/^\d{4}$/.test(year)) setSelectedMonth(`${year}-${selectedMonthPart(selectedMonth)}`);
   }
 
   function paymentStatus(playerId: string): MonthlyPaymentStatus {
@@ -240,11 +304,13 @@ export default function AdminFinanceiroPage() {
           </div>
           <div>
             <Label>Mês</Label>
-            <Input className="mt-1" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+            <Select className="mt-1" value={selectedMonthPart(selectedMonth)} onChange={(e) => changeSelectedMonth(e.target.value)}>
+              {monthOptions.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}
+            </Select>
           </div>
           <div>
             <Label>Ano</Label>
-            <Input className="mt-1" type="number" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} />
+            <Input className="mt-1" type="number" value={selectedYear} onChange={(e) => changeSelectedYear(e.target.value)} />
           </div>
         </div>
       </div>
@@ -308,10 +374,12 @@ export default function AdminFinanceiroPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                value={finance.monthlyFeeAmount || ""}
+                value={monthlyFeeDraft}
                 placeholder="0"
-                onChange={(e) => persist({ ...finance, monthlyFeeAmount: e.target.value === "" ? 0 : +e.target.value })}
+                onChange={(e) => setMonthlyFeeDraft(e.target.value)}
+                onBlur={() => void saveMonthlyFee()}
               />
+              <p className="mt-1 text-xs text-brand-gray">Salva automaticamente ao sair do campo.</p>
             </div>
           </div>
           {/* Mobile: cards */}
@@ -406,7 +474,7 @@ export default function AdminFinanceiroPage() {
           <form onSubmit={(e) => { e.preventDefault(); void saveRevenue(editingRevenue); }} className="space-y-4">
             <div><Label>Descrição</Label><Input required className="mt-1" value={editingRevenue.description} onChange={(e) => setEditingRevenue({ ...editingRevenue, description: e.target.value })} /></div>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div><Label>Data</Label><Input required className="mt-1" type="date" value={editingRevenue.date} onChange={(e) => setEditingRevenue({ ...editingRevenue, date: e.target.value })} /></div>
+              <DateSelect label="Data" value={editingRevenue.date} onChange={(date) => setEditingRevenue({ ...editingRevenue, date })} />
               <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" placeholder="0" value={editingRevenue.value || ""} onChange={(e) => setEditingRevenue({ ...editingRevenue, value: e.target.value === "" ? 0 : +e.target.value })} /></div>
             </div>
             <FormActions saving={saving} onCancel={() => setEditingRevenue(null)} />
@@ -419,7 +487,7 @@ export default function AdminFinanceiroPage() {
           <form onSubmit={(e) => { e.preventDefault(); void saveExpense(editingExpense); }} className="space-y-4">
             <div><Label>Descrição</Label><Input required className="mt-1" value={editingExpense.description} onChange={(e) => setEditingExpense({ ...editingExpense, description: e.target.value })} /></div>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div><Label>Data</Label><Input required className="mt-1" type="date" value={editingExpense.date} onChange={(e) => setEditingExpense({ ...editingExpense, date: e.target.value })} /></div>
+              <DateSelect label="Data" value={editingExpense.date} onChange={(date) => setEditingExpense({ ...editingExpense, date })} />
               <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" placeholder="0" value={editingExpense.value || ""} onChange={(e) => setEditingExpense({ ...editingExpense, value: e.target.value === "" ? 0 : +e.target.value })} /></div>
             </div>
             <FormActions saving={saving} onCancel={() => setEditingExpense(null)} />
@@ -432,7 +500,7 @@ export default function AdminFinanceiroPage() {
           <form onSubmit={(e) => { e.preventDefault(); void saveSponsorship(editingSponsorship); }} className="space-y-4">
             <div><Label>Nome</Label><Input required className="mt-1" value={editingSponsorship.name} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, name: e.target.value })} /></div>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div><Label>Data</Label><Input required className="mt-1" type="date" value={editingSponsorship.date} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, date: e.target.value })} /></div>
+              <DateSelect label="Data" value={editingSponsorship.date} onChange={(date) => setEditingSponsorship({ ...editingSponsorship, date })} />
               <div><Label>Valor</Label><Input required className="mt-1" type="number" min="0" step="0.01" placeholder="0" value={editingSponsorship.value || ""} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, value: e.target.value === "" ? 0 : +e.target.value })} /></div>
             </div>
             <div>
@@ -476,6 +544,36 @@ function SummaryCard({ label, value, detail }: { label: string; value: string; d
   return <div className="bg-brand-black-2 border border-brand-border rounded-sm p-4"><p className="text-[10px] uppercase tracking-wider text-brand-gray">{label}</p><p className="font-display text-2xl text-white mt-2">{value}</p><p className="text-xs text-brand-gray mt-1">{detail}</p></div>;
 }
 
+function DateSelect({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const [year = String(new Date().getFullYear()), month = "01", day = "01"] = value.split("-");
+  const maxDay = daysInMonth(year, month);
+
+  function updateDate(next: { year?: string; month?: string; day?: string }) {
+    const nextYear = next.year ?? year;
+    const nextMonth = next.month ?? month;
+    const nextDay = clampDay(nextYear, nextMonth, next.day ?? day);
+    onChange(`${nextYear}-${nextMonth}-${nextDay}`);
+  }
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="grid grid-cols-[80px_1fr_90px] gap-2 mt-1">
+        <Select value={day} onChange={(e) => updateDate({ day: e.target.value })} aria-label="Dia">
+          {Array.from({ length: maxDay }, (_, index) => {
+            const option = String(index + 1).padStart(2, "0");
+            return <option key={option} value={option}>{option}</option>;
+          })}
+        </Select>
+        <Select value={month} onChange={(e) => updateDate({ month: e.target.value })} aria-label="Mês">
+          {monthOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </Select>
+        <Input type="number" value={year} onChange={(e) => updateDate({ year: e.target.value })} aria-label="Ano" />
+      </div>
+    </div>
+  );
+}
+
 function MonthlySummary({ movements, income, expenses, monthlyTotal, revenueTotal, sponsorshipTotal, selectedMonth }: { movements: MonthlyMovement[]; income: number; expenses: number; monthlyTotal: number; revenueTotal: number; sponsorshipTotal: number; selectedMonth: string }) {
   const balance = income - expenses;
   return (
@@ -484,7 +582,7 @@ function MonthlySummary({ movements, income, expenses, monthlyTotal, revenueTota
         <SummaryCard label="Entrou no mês" value={formatCurrency(income)} detail="Mensalidades + receitas + patrocínios" />
         <SummaryCard label="Gastou no mês" value={formatCurrency(expenses)} detail="Total de gastos registrados" />
         <SummaryCard label="Saldo do mês" value={formatCurrency(balance)} detail={balance >= 0 ? "Resultado positivo" : "Resultado negativo"} />
-        <SummaryCard label="Movimentações" value={String(movements.length)} detail={`Referência ${selectedMonth}`} />
+        <SummaryCard label="Movimentações" value={String(movements.length)} detail={`Referência ${formatMonthReference(selectedMonth)}`} />
       </div>
       <div className="bg-brand-black-2 border border-brand-border rounded-sm p-4">
         <h2 className="font-display uppercase text-lg text-brand-gold">Resumo mensal</h2>
