@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, Mail, MapPin, Phone } from "lucide-react";
+import { Camera, MapPin, Phone } from "lucide-react";
 import { clubInfo } from "@/data/club";
 import { avontzLogo, bravuraLogo } from "@/lib/asset-url";
 
@@ -56,11 +56,15 @@ export function Footer() {
             </li>
             <li className="flex min-w-0 items-center gap-2">
               <Phone className="w-4 h-4 text-brand-red" />
-              <a href="https://wa.me/5533987976​00" className="min-w-0 break-words">(33) 9879-7600</a>
+              <a href="https://wa.me/553398797600" className="min-w-0 break-words">(33) 9879-7600</a>
             </li>
             <li className="flex min-w-0 items-center gap-2">
-              <Mail className="w-4 h-4 text-brand-red" />
-              <a href="mailto:bravuraesporteclube@gmail.com" className="min-w-0 break-words">bravuraesporteclube@gmail.com</a>
+              <Phone className="w-4 h-4 text-brand-red" />
+              <a href="https://wa.me/5531986070970" className="min-w-0 break-words">(31) 98607-0970</a>
+            </li>
+            <li className="flex min-w-0 items-center gap-2">
+              <Phone className="w-4 h-4 text-brand-red" />
+              <a href="https://wa.me/5533984317880" className="min-w-0 break-words">(33) 98431-7880</a>
             </li>
             <li>
               <a

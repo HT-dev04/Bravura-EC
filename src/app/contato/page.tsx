@@ -1,7 +1,13 @@
 "use client";
 
 import { SiteShell } from "@/components/site/SiteShell";
-import { Mail, MessageCircle, Camera } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+
+const contacts = [
+  { detail: "(33) 9879-7600", href: "https://wa.me/553398797600" },
+  { detail: "(31) 98607-0970", href: "https://wa.me/5531986070970" },
+  { detail: "(33) 98431-7880", href: "https://wa.me/5533984317880" },
+];
 
 export default function ContatoPage() {
   return (
@@ -19,24 +25,9 @@ export default function ContatoPage() {
       </section>
 
       <section className="container-x py-10 grid lg:grid-cols-3 gap-5 mb-4">
-        <ContactCard
-          icon={MessageCircle}
-          title="WhatsApp"
-          detail="(33) 9879-7600"
-          href="https://wa.me/5533987976​00"
-        />
-        <ContactCard
-          icon={Camera}
-          title="Instagram"
-          detail="@bravura_esporte_clube"
-          href="https://www.instagram.com/bravura_esporte_clube"
-        />
-        <ContactCard
-          icon={Mail}
-          title="E-mail"
-          detail="bravuraesporteclube@gmail.com"
-          href="mailto:bravuraesporteclube@gmail.com"
-        />
+        {contacts.map((contact) => (
+          <ContactCard key={contact.href} title="WhatsApp" detail={contact.detail} href={contact.href} />
+        ))}
       </section>
 
       <section className="container-x py-10 pb-20">
@@ -45,8 +36,15 @@ export default function ContatoPage() {
           <p className="break-words text-brand-gray max-w-xl mx-auto mb-6">
             Fale diretamente com o Bravura pelo WhatsApp para assuntos sobre amistosos, patrocínios, peneiras e imprensa.
           </p>
+          <div className="mb-6 flex flex-wrap justify-center gap-2 text-sm text-brand-gray">
+            {contacts.map((contact) => (
+              <a key={contact.href} href={contact.href} target="_blank" rel="noopener noreferrer" className="rounded-full border border-brand-border px-3 py-1 hover:border-brand-red hover:text-brand-white">
+                {contact.detail}
+              </a>
+            ))}
+          </div>
           <a
-            href="https://wa.me/553398797600"
+            href={contacts[0].href}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex max-w-full items-center justify-center gap-2 rounded-sm bg-brand-red px-6 py-3 text-center text-base font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-red-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black"
@@ -61,12 +59,10 @@ export default function ContatoPage() {
 }
 
 function ContactCard({
-  icon: Icon,
   title,
   detail,
   href,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
   title: string;
   detail: string;
   href: string;
@@ -78,7 +74,7 @@ function ContactCard({
       rel="noopener noreferrer"
       className="block min-w-0 bg-brand-black-2 border border-brand-border hover:border-brand-red rounded-sm p-6 transition-colors"
     >
-      <Icon className="w-7 h-7 text-brand-red mb-3" />
+      <MessageCircle className="w-7 h-7 text-brand-red mb-3" />
       <p className="break-words font-display uppercase text-lg">{title}</p>
       <p className="break-words text-sm text-brand-gray">{detail}</p>
     </a>

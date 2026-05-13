@@ -39,6 +39,7 @@ export default async function HomePage() {
   const teamStats = getTeamStats(matches);
   const { topScorers, topAssists, topGames } = getPlayerRankings(players);
   const topHighlights = getTopHighlights(players, matches);
+  const tickerMatches = [...matches].sort((a, b) => +new Date(b.date) - +new Date(a.date));
 
   return (
     <SiteShell>
@@ -82,6 +83,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <MatchTicker matches={tickerMatches} />
 
       <section className="container-x py-14">
         <div className="grid md:grid-cols-2 gap-5">
@@ -231,6 +234,8 @@ function HomeMatchSummaryCard({
   const opponentLogo = getValidImageSrc(match.opponentLogo);
   const highlightPhoto = getValidImageSrc(match.highlightPhoto) || getValidImageSrc(highlight?.photo);
   const showHighlight = match.status === "encerrada" && (highlight || highlightPhoto || match.highlightQuote);
+  const goalEvents = match.events.filter((event) => event.type === "gol" && event.playerName.trim());
+  const showGoals = match.status === "encerrada";
 
   return (
     <div className="overflow-hidden rounded-sm border border-brand-border bg-[radial-gradient(circle_at_top,rgba(200,16,46,0.16),transparent_42%)]">
@@ -282,6 +287,29 @@ function HomeMatchSummaryCard({
         </p>
       </div>
 
+      {showGoals && (
+        <div className="border-t border-brand-border/80 px-4 py-3">
+          {goalEvents.length > 0 ? (
+            <div className="rounded-sm bg-brand-black/55 px-3 py-2">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-gold">Gols da partida</p>
+              <div className="flex flex-wrap gap-1.5">
+                {goalEvents.map((goal, index) => (
+                  <span
+                    key={`${goal.team}-${goal.playerName}-${goal.minute}-${index}`}
+                    className="rounded-full border border-brand-border bg-white/5 px-2 py-1 text-[11px] font-semibold text-brand-white/85"
+                  >
+                    {goal.playerName}{goal.minute > 0 ? ` ${goal.minute}'` : ""}
+                    <span className="ml-1 text-brand-gray">{goal.team === "bravura" ? "Bravura" : match.opponent}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] uppercase tracking-wider text-brand-gray">Gols ainda não registrados.</p>
+          )}
+        </div>
+      )}
+
       {showHighlight && (
         <div className="border-t border-brand-border/80 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3 rounded-sm border border-brand-gold/40 bg-brand-black/55 p-3">
@@ -309,6 +337,61 @@ function HomeMatchSummaryCard({
         </Link>
       </div>
     </div>
+  );
+}
+
+function MatchTicker({ matches }: { matches: Match[] }) {
+  if (matches.length === 0) return null;
+
+  const tickerItems = matches.length > 1 ? [...matches, ...matches] : matches;
+
+  return (
+    <section className="border-y border-brand-border bg-brand-black-2/80 py-3 overflow-hidden">
+      <div className="mb-2 flex items-center justify-between gap-3 px-4 text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold md:px-8">
+        <span>Jogos do Bravura</span>
+        <Link href="/jogos" className="text-brand-white/60 hover:text-brand-white">Ver todos</Link>
+      </div>
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-brand-black-2 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-brand-black-2 to-transparent" />
+        <div className={`flex w-max gap-3 px-4 md:px-8 ${matches.length > 1 ? "animate-match-ticker" : ""}`}>
+          {tickerItems.map((match, index) => (
+            <TickerMatchCard key={`${match.id}-${index}`} match={match} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TickerMatchCard({ match }: { match: Match }) {
+  const opponentLogo = getValidImageSrc(match.opponentLogo);
+
+  return (
+    <Link
+      href={`/jogos/${match.id}`}
+      className="grid w-36 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-sm border border-brand-border bg-brand-black px-3 py-2 transition-colors hover:border-brand-gold/70 sm:w-40"
+    >
+      <div className="min-w-0">
+        <Image src={bravuraLogo} alt="Bravura" width={34} height={34} className="mx-auto h-8 w-8 object-contain" />
+      </div>
+      <div className="text-center font-display text-lg font-bold text-brand-white">
+        {match.status === "encerrada" ? (
+          <span>{match.scoreHome} <span className="text-brand-red">×</span> {match.scoreAway}</span>
+        ) : (
+          <span className="text-brand-gold">VS</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        {opponentLogo ? (
+          <Image src={opponentLogo} alt={match.opponent} width={34} height={34} className="mx-auto h-8 w-8 object-contain" />
+        ) : (
+          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-sm border border-brand-border bg-brand-black-2 text-[10px] font-bold text-brand-gray">
+            {match.opponent.slice(0, 2).toUpperCase()}
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
 
