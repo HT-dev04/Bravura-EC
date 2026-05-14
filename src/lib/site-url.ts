@@ -5,3 +5,8 @@ export const siteUrl =
     : process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "https://bravuraec.com.br");
+
+export function absoluteUrl(path: string) {
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return new URL(path, siteUrl).toString();
+}

@@ -11,6 +11,19 @@ import { createAdminId } from "@/lib/admin-id";
 import type { Match, MatchEvent, Player } from "@/types";
 import { dateTimeLocalToIso, formatDate, formatDateTimeLocalInput } from "@/lib/utils";
 
+function normalizeMatchResult(match: Match): Match {
+  if (match.scoreHome === null || match.scoreAway === null) return match;
+
+  const result: Match["result"] = match.scoreHome > match.scoreAway ? "V" : match.scoreHome < match.scoreAway ? "D" : "E";
+  const datePassed = new Date(match.date).getTime() <= Date.now();
+
+  return {
+    ...match,
+    result,
+    status: datePassed && match.status === "agendada" ? "encerrada" : match.status,
+  };
+}
+
 export default function AdminPartidasPage() {
   const [rows, setRows] = useState<Match[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -63,8 +76,9 @@ export default function AdminPartidasPage() {
 
   async function handleSave(m: Match) {
     setSaving(true);
-    const exists = rows.find((x) => x.id === m.id);
-    const next = exists ? rows.map((x) => (x.id === m.id ? m : x)) : [...rows, m];
+    const savedMatch = normalizeMatchResult(m);
+    const exists = rows.find((x) => x.id === savedMatch.id);
+    const next = exists ? rows.map((x) => (x.id === savedMatch.id ? savedMatch : x)) : [...rows, savedMatch];
     try {
       await persist(next);
       setOpen(false);
@@ -95,6 +109,21 @@ export default function AdminPartidasPage() {
       ...editing,
       events: editing.events.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)),
     });
+  }
+
+  function updateEventPlayer(i: number, playerId: string) {
+    if (playerId === "__custom") {
+      updateEvent(i, { playerId: "", playerName: "" });
+      return;
+    }
+
+    const player = players.find((item) => item.id === playerId);
+    updateEvent(i, { playerId, playerName: player?.name || player?.nickname || "" });
+  }
+
+  function eventPlayerSelectValue(event: MatchEvent) {
+    if (event.playerId && players.some((player) => player.id === event.playerId)) return event.playerId;
+    return "__custom";
   }
 
   function removeEvent(i: number) {
@@ -437,7 +466,7 @@ export default function AdminPartidasPage() {
                 {editing.events.map((ev, i) => (
                   <div
                     key={i}
-                    className="bg-brand-black border border-brand-border rounded-sm p-2 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[60px_1fr_1fr_1fr_auto] sm:gap-2 sm:items-center"
+                    className="bg-brand-black border border-brand-border rounded-sm p-2 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[60px_1fr_1.35fr_1fr_auto] sm:gap-2 sm:items-center"
                   >
                     {/* Mobile: linha 1 — minuto + tipo */}
                     <div className="grid grid-cols-[64px_1fr] gap-2 sm:contents">
@@ -460,11 +489,25 @@ export default function AdminPartidasPage() {
                     </div>
                     {/* Mobile: linha 2 — jogador + time + excluir */}
                     <div className="grid grid-cols-1 min-[420px]:grid-cols-[1fr_1fr_auto] gap-2 sm:contents">
-                      <Input
-                        placeholder="Jogador"
-                        value={ev.playerName}
-                        onChange={(e) => updateEvent(i, { playerName: e.target.value })}
-                      />
+                      <div className="space-y-2">
+                        <Select
+                          aria-label="Jogador do evento"
+                          value={eventPlayerSelectValue(ev)}
+                          onChange={(e) => updateEventPlayer(i, e.target.value)}
+                        >
+                          <option value="__custom">Outro jogador / digitar nome</option>
+                          {players.map((player) => (
+                            <option key={player.id} value={player.id}>
+                              {player.nickname || player.name} · #{player.number}
+                            </option>
+                          ))}
+                        </Select>
+                        <Input
+                          placeholder="Nome do jogador"
+                          value={ev.playerName}
+                          onChange={(e) => updateEvent(i, { playerId: "", playerName: e.target.value })}
+                        />
+                      </div>
                       <Select
                         value={ev.team}
                         onChange={(e) => updateEvent(i, { team: e.target.value as MatchEvent["team"] })}

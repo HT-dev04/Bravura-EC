@@ -2,6 +2,7 @@ import "server-only";
 
 import { connection } from "next/server";
 import { assetUrl } from "@/lib/asset-url";
+import { getPlayersWithMatchStats, getTeamStats } from "@/lib/cms-stats";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -417,9 +418,12 @@ export async function getCmsData(): Promise<CmsData> {
     ])
   );
 
+  const matches = matchRows.map(fromMatch);
+  const players = getPlayersWithMatchStats(playerRows.map(fromPlayer), matches);
+
   return {
-    players: playerRows.map(fromPlayer),
-    matches: matchRows.map(fromMatch),
+    players,
+    matches,
     news: newsRows.map(fromNews),
     gallery: galleryRows.map(fromGallery),
     products: productRows.map(fromProduct),
@@ -453,11 +457,17 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
     case "matches":
       await prisma.$transaction(
         async (tx) => {
-          const matchRows = (rows as Match[]).map(toMatch);
+          const matches = rows as Match[];
+          const matchRows = matches.map(toMatch);
           await tx.match.deleteMany({ where: { id: { notIn: rowIds(matchRows) } } });
           for (const match of matchRows) {
             await tx.match.upsert({ where: { id: match.id }, update: withoutId(match), create: match });
           }
+          await tx.teamStats.upsert({
+            where: { id: "default" },
+            update: toTeamStats(getTeamStats(matches)),
+            create: toTeamStats(getTeamStats(matches)),
+          });
         },
         { maxWait: 10000, timeout: 30000 }
       );

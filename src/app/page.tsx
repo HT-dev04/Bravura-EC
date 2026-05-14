@@ -7,12 +7,14 @@ import { StatCard } from "@/components/site/StatCard";
 import { MatchCard } from "@/components/site/MatchCard";
 import { NewsCard } from "@/components/site/NewsCard";
 import { SponsorGrid } from "@/components/site/SponsorGrid";
+import { RankingShareModal } from "@/components/site/RankingShareModal";
 import { Button } from "@/components/ui/button";
 import { clubInfo } from "@/data/club";
 import { getCmsData } from "@/lib/cms-store";
 import { bravuraLogo } from "@/lib/asset-url";
-import { getValidImageSrc } from "@/lib/image-utils";
+import { getInitials, getValidImageSrc } from "@/lib/image-utils";
 import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
+import { absoluteUrl, siteUrl } from "@/lib/site-url";
 import { formatDateLong, formatTime } from "@/lib/utils";
 import type { Match, Player } from "@/types";
 
@@ -40,6 +42,8 @@ export default async function HomePage() {
   const { topScorers, topAssists, topGames } = getPlayerRankings(players);
   const topHighlights = getTopHighlights(players, matches);
   const tickerMatches = [...matches].sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  const rankingShareUrl = absoluteUrl("/estatisticas");
+  const siteLabel = new URL(siteUrl).hostname.replace(/^www\./, "");
 
   return (
     <SiteShell>
@@ -131,10 +135,10 @@ export default async function HomePage() {
       <section className="container-x py-14">
         <SectionHeader eyebrow="Rankings" title="Destaques individuais" />
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
-          <RankingPanel title="Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} />
-          <RankingPanel title="Assistentes" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} />
-          <RankingPanel title="Mais jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} />
-          <RankingPanel title="Craques do jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} />
+          <RankingPanel title="Artilheiros" shareTitle="Top Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
+          <RankingPanel title="Assistentes" shareTitle="Top Assistências" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
+          <RankingPanel title="Mais jogos" shareTitle="Mais Jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} showZeroValues />
+          <RankingPanel title="Craques do jogo" shareTitle="Craques do Jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
         </div>
       </section>
 
@@ -397,22 +401,43 @@ function TickerMatchCard({ match }: { match: Match }) {
 
 function RankingPanel({
   title,
+  shareTitle,
   icon,
   rows,
+  shareUrl,
+  siteLabel,
+  showZeroValues = false,
 }: {
   title: string;
+  shareTitle: string;
   icon: "goals" | "assists" | "games" | "stars";
   rows: Array<{ player: Player; value: number; label: string }>;
+  shareUrl: string;
+  siteLabel: string;
+  showZeroValues?: boolean;
 }) {
   const Icon = icon === "goals" ? Trophy : icon === "assists" ? Handshake : icon === "games" ? Gamepad2 : Sparkles;
   const accent = icon === "goals" || icon === "stars" ? "text-brand-red" : "text-brand-gold";
-  const visibleRows = rows.filter((row) => row.value > 0).slice(0, 4);
+  const rankedRows = showZeroValues ? rows : rows.filter((row) => row.value > 0);
+  const visibleRows = rankedRows.slice(0, 4);
+  const shareItems = rankedRows
+    .slice(0, 5)
+    .map((row) => ({
+      id: row.player.id,
+      name: row.player.nickname || row.player.name,
+      photo: getValidImageSrc(row.player.photo) || undefined,
+      value: row.value,
+      label: row.label,
+    }));
 
   return (
     <div className="min-w-0 overflow-hidden rounded-sm border border-brand-border bg-brand-black-2">
-      <div className="flex items-center gap-2 border-b border-brand-border px-4 py-3">
-        <Icon className={`h-4 w-4 ${accent}`} />
-        <h3 className="font-display text-lg uppercase tracking-wide">{title}</h3>
+      <div className="space-y-3 border-b border-brand-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${accent}`} />
+          <h3 className="font-display text-lg uppercase tracking-wide">{title}</h3>
+        </div>
+        <RankingShareModal title={shareTitle} subtitle="Temporada 2026" items={shareItems} shareUrl={shareUrl} siteLabel={siteLabel} />
       </div>
       <div className="divide-y divide-brand-border">
         {visibleRows.length > 0 ? (
@@ -424,7 +449,13 @@ function RankingPanel({
             >
               <span className="w-6 shrink-0 text-center font-display text-lg text-brand-gold">{index + 1}</span>
               <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-brand-black">
-                {getValidImageSrc(row.player.photo) && <Image src={getValidImageSrc(row.player.photo)!} alt={row.player.name} fill sizes="40px" className="object-cover" />}
+                {getValidImageSrc(row.player.photo) ? (
+                  <Image src={getValidImageSrc(row.player.photo)!} alt={row.player.name} fill sizes="40px" className="object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs font-bold text-brand-gold">
+                    {getInitials(row.player.nickname || row.player.name)}
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display uppercase leading-tight">{row.player.nickname || row.player.name}</p>
