@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Copy, Download, Share2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Dialog } from "@/components/ui/dialog";
@@ -14,22 +14,92 @@ type RankingShareModalProps = {
   siteLabel: string;
 };
 
+const FRAME_SRC: Record<1 | 2, string> = {
+  1: "/moldura-ranking2.png",
+  2: "/moldura-ranking3.png",
+};
+
+// Converte qualquer imagem (moldura local ou foto remota do Supabase) em data URL.
+// Fotos cross-origin passam pelo proxy same-origin para evitar problemas de CORS.
+// Assim o html-to-image embute tudo no PNG sem depender de fetch externo na captura.
+async function toDataUrl(src: string): Promise<string | null> {
+  if (src.startsWith("data:")) return src;
+
+  let fetchUrl = src;
+  if (/^https?:\/\//i.test(src)) {
+    try {
+      if (new URL(src).origin !== window.location.origin) {
+        fetchUrl = `/api/image-proxy?url=${encodeURIComponent(src)}`;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const response = await fetch(fetchUrl, { cache: "no-store" });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel }: RankingShareModalProps) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [frameVariant, setFrameVariant] = useState<1 | 2>(1);
+  const [frameSrc, setFrameSrc] = useState<string | null>(null);
+  const [preparedItems, setPreparedItems] = useState<RankingShareItem[] | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const prepareAssets = useCallback(
+    async (variant: 1 | 2) => {
+      setPreparing(true);
+      setFrameSrc(null);
+      setPreparedItems(null);
+      try {
+        const [frame, resolvedItems] = await Promise.all([
+          toDataUrl(FRAME_SRC[variant]),
+          Promise.all(
+            items.map(async (item) => {
+              if (!item.photo) return item;
+              const photo = await toDataUrl(item.photo);
+              // Sem a foto embutida, deixa o fallback (inicial) aparecer no lugar do círculo vazio.
+              return { ...item, photo: photo ?? undefined };
+            })
+          ),
+        ]);
+        setFrameSrc(frame ?? FRAME_SRC[variant]);
+        setPreparedItems(resolvedItems);
+      } finally {
+        setPreparing(false);
+      }
+    },
+    [items]
+  );
+
   function openShareModal() {
-    setFrameVariant(Math.random() < 0.5 ? 1 : 2);
+    const variant: 1 | 2 = Math.random() < 0.5 ? 1 : 2;
+    setMessage(null);
+    setFrameVariant(variant);
     setOpen(true);
+    void prepareAssets(variant);
   }
 
+  const ready = !preparing && Boolean(frameSrc) && Boolean(preparedItems);
+
   async function createImageFile() {
-    if (!cardRef.current) return null;
+    if (!cardRef.current || !ready) return null;
     const dataUrl = await toPng(cardRef.current, {
-      cacheBust: true,
       pixelRatio: 1,
       width: 1080,
       height: 1920,
@@ -112,10 +182,24 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
       <Dialog open={open} onClose={() => setOpen(false)} title="Compartilhar ranking" className="max-w-4xl">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="overflow-hidden rounded-sm border border-brand-border bg-brand-black p-3">
-            <div className="mx-auto aspect-[9/16] max-h-[70vh] max-w-sm overflow-hidden rounded-sm bg-brand-black">
-              <div className="origin-top-left scale-[0.333]">
-                <RankingShareCard ref={cardRef} title={title} subtitle={subtitle} items={items} siteLabel={siteLabel} frameVariant={frameVariant} />
-              </div>
+            <div className="relative mx-auto aspect-[9/16] max-h-[70vh] max-w-sm overflow-hidden rounded-sm bg-brand-black">
+              {ready && frameSrc && preparedItems ? (
+                <div className="origin-top-left scale-[0.333]">
+                  <RankingShareCard
+                    ref={cardRef}
+                    title={title}
+                    subtitle={subtitle}
+                    items={preparedItems}
+                    siteLabel={siteLabel}
+                    frameVariant={frameVariant}
+                    frameSrc={frameSrc}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-center text-xs font-semibold uppercase tracking-wider text-brand-gray">
+                  Gerando arte…
+                </div>
+              )}
             </div>
           </div>
 
@@ -126,16 +210,16 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
             <button
               type="button"
               onClick={handleDownload}
-              disabled={busy}
+              disabled={busy || !ready}
               className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-brand-red px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Download className="h-4 w-4" />
-              Baixar imagem
+              {preparing ? "Gerando…" : "Baixar imagem"}
             </button>
             <button
               type="button"
               onClick={handleShare}
-              disabled={busy}
+              disabled={busy || !ready}
               className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-brand-gold px-4 py-3 text-sm font-semibold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-gold-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Share2 className="h-4 w-4" />

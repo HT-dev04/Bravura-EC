@@ -15,12 +15,12 @@ type RankingShareCardProps = {
   items: RankingShareItem[];
   siteLabel: string;
   frameVariant: 1 | 2;
+  frameSrc: string;
 };
 
 export const RankingShareCard = forwardRef<HTMLDivElement, RankingShareCardProps>(
-  ({ title, subtitle, items, siteLabel, frameVariant }, ref) => {
+  ({ title, subtitle, items, siteLabel, frameVariant, frameSrc }, ref) => {
     const visibleItems = items.filter((item) => item.name && Number.isFinite(item.value)).slice(0, 5);
-    const frameSrc = frameVariant === 1 ? "/moldura-ranking2.png" : "/moldura-ranking3.png";
     const listTop = frameVariant === 1 ? 735 : 635;
     const listHeight = frameVariant === 1 ? 715 : 760;
 
@@ -65,7 +65,7 @@ export const RankingShareCard = forwardRef<HTMLDivElement, RankingShareCardProps
                   </div>
                   <div className={`shrink-0 overflow-hidden rounded-full border-2 border-brand-gold bg-brand-black ${isLeader ? "h-24 w-24" : "h-[72px] w-[72px]"}`}>
                     {item.photo ? (
-                      <img src={item.photo} alt={item.name} crossOrigin="anonymous" className="h-full w-full object-cover" />
+                      <img src={item.photo} alt={item.name} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-brand-black-2 text-2xl font-black uppercase text-brand-gold">
                         {item.name.slice(0, 1)}
