@@ -36,6 +36,8 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [variant, setVariant] = useState<1 | 2>(1);
 
   // A arte é gerada 100% no servidor (next/og), então funciona igual em desktop e celular.
@@ -51,14 +53,24 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
         label: item.label,
       }));
     const d = encodePayload({ title, subtitle, variant, items: cleanItems });
-    return `/api/ranking-image?d=${d}`;
-  }, [title, subtitle, variant, items]);
+    const retry = attempt > 0 ? `&r=${attempt}` : "";
+    return `/api/ranking-image?d=${d}${retry}`;
+  }, [title, subtitle, variant, items, attempt]);
 
   function openShareModal() {
     setMessage(null);
     setLoaded(false);
+    setFailed(false);
+    setAttempt(0);
     setVariant(Math.random() < 0.5 ? 1 : 2);
     setOpen(true);
+  }
+
+  function retryGeneration() {
+    setLoaded(false);
+    setFailed(false);
+    setMessage(null);
+    setAttempt((value) => value + 1);
   }
 
   async function createImageFile() {
@@ -149,18 +161,34 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="overflow-hidden rounded-sm border border-brand-border bg-brand-black p-3">
             <div className="relative mx-auto aspect-[9/16] max-h-[70vh] max-w-sm overflow-hidden rounded-sm bg-brand-black">
-              {open && (
+              {open && !failed && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
+                  key={imageUrl}
                   src={imageUrl}
                   alt="Prévia do ranking Bravura"
                   onLoad={() => setLoaded(true)}
+                  onError={() => setFailed(true)}
                   className={`h-full w-full object-contain transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
                 />
               )}
-              {!loaded && (
+              {!loaded && !failed && (
                 <div className="absolute inset-0 flex items-center justify-center text-center text-xs font-semibold uppercase tracking-wider text-brand-gray">
                   Gerando arte…
+                </div>
+              )}
+              {failed && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-gray">
+                    Não foi possível gerar a arte.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={retryGeneration}
+                    className="rounded-sm border border-brand-gold/60 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-brand-gold transition-colors hover:bg-brand-gold hover:text-brand-black"
+                  >
+                    Tentar de novo
+                  </button>
                 </div>
               )}
             </div>

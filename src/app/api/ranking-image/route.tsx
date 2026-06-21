@@ -1,7 +1,11 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 type ShareItem = {
   id: string;
@@ -14,7 +18,6 @@ type ShareItem = {
 type Payload = {
   title: string;
   subtitle: string;
-  siteLabel?: string;
   variant: 1 | 2;
   items: ShareItem[];
 };
@@ -22,6 +25,13 @@ type Payload = {
 const GOLD = "#d4af37";
 const RED = "#c8102e";
 const WHITE = "#ffffff";
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const PHOTO_SIZE = 220;
+const PHOTO_TIMEOUT_MS = 6000;
+
+// Caches por lambda “quente” — moldura e fontes não mudam entre requisições.
+const fontCache = new Map<string, Buffer>();
+const frameCache = new Map<number, string>();
 
 function decodePayload(d: string): Payload {
   const normalized = d.replace(/-/g, "+").replace(/_/g, "/");
@@ -29,27 +39,73 @@ function decodePayload(d: string): Payload {
   return JSON.parse(json) as Payload;
 }
 
-async function loadFont(origin: string, file: string) {
-  const res = await fetch(`${origin}/fonts/${file}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Falha ao carregar fonte ${file}`);
-  return res.arrayBuffer();
+async function loadFont(file: string) {
+  const cached = fontCache.get(file);
+  if (cached) return cached;
+  const buffer = await readFile(path.join(PUBLIC_DIR, "fonts", file));
+  fontCache.set(file, buffer);
+  return buffer;
 }
 
-function absolutize(origin: string, src?: string) {
+// Redimensiona a moldura para 1080x1920 exatos — reduz o trabalho do renderizador.
+async function loadFrame(variant: 1 | 2) {
+  const cached = frameCache.get(variant);
+  if (cached) return cached;
+  const file = variant === 2 ? "moldura-ranking3.png" : "moldura-ranking2.png";
+  const buffer = await readFile(path.join(PUBLIC_DIR, file));
+  const resized = await sharp(buffer).resize(1080, 1920, { fit: "cover" }).jpeg({ quality: 88 }).toBuffer();
+  const dataUrl = `data:image/jpeg;base64,${resized.toString("base64")}`;
+  frameCache.set(variant, dataUrl);
+  return dataUrl;
+}
+
+async function fetchWithTimeout(url: string, ms: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Baixa a foto, recorta num quadrado pequeno e devolve como data URL.
+// Qualquer falha (timeout, formato inválido, host fora do ar) cai no fallback (inicial).
+async function loadPhoto(src?: string): Promise<string | undefined> {
   if (!src) return undefined;
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) return src;
-  if (src.startsWith("/")) return `${origin}${src}`;
-  return undefined;
+  if (src.startsWith("data:")) return src;
+
+  let source: Buffer | null = null;
+  if (/^https?:\/\//i.test(src)) {
+    source = await fetchWithTimeout(src, PHOTO_TIMEOUT_MS);
+  } else if (src.startsWith("/")) {
+    try {
+      source = await readFile(path.join(PUBLIC_DIR, src.replace(/^\/+/, "")));
+    } catch {
+      source = null;
+    }
+  }
+  if (!source) return undefined;
+
+  try {
+    const out = await sharp(source)
+      .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: "centre" })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+    return `data:image/jpeg;base64,${out.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const origin = url.origin;
   const d = url.searchParams.get("d");
-
-  if (!d) {
-    return new Response("Parâmetro 'd' obrigatório", { status: 400 });
-  }
+  if (!d) return new Response("Parâmetro 'd' obrigatório", { status: 400 });
 
   let payload: Payload;
   try {
@@ -58,29 +114,33 @@ export async function GET(request: Request) {
     return new Response("Payload inválido", { status: 400 });
   }
 
-  const { title, subtitle, variant } = payload;
-  const items = (payload.items || [])
+  const { title, subtitle } = payload;
+  const variant: 1 | 2 = payload.variant === 2 ? 2 : 1;
+  const listTop = variant === 2 ? 635 : 735;
+  const rawItems = (payload.items || [])
     .filter((item) => item && item.name && Number.isFinite(item.value))
     .slice(0, 5);
 
-  const frameFile = variant === 2 ? "moldura-ranking3.png" : "moldura-ranking2.png";
-  const frameSrc = `${origin}/${frameFile}`;
-  const listTop = variant === 2 ? 635 : 735;
-
+  let frameSrc: string;
   let fonts;
+  let items: Array<ShareItem & { resolvedPhoto?: string }>;
   try {
-    const [medium, semibold, bold] = await Promise.all([
-      loadFont(origin, "Oswald-500.ttf"),
-      loadFont(origin, "Oswald-600.ttf"),
-      loadFont(origin, "Oswald-700.ttf"),
+    const [frame, medium, semibold, bold, photos] = await Promise.all([
+      loadFrame(variant),
+      loadFont("Oswald-500.ttf"),
+      loadFont("Oswald-600.ttf"),
+      loadFont("Oswald-700.ttf"),
+      Promise.all(rawItems.map((item) => loadPhoto(item.photo))),
     ]);
+    frameSrc = frame;
     fonts = [
       { name: "Oswald", data: medium, weight: 500 as const, style: "normal" as const },
       { name: "Oswald", data: semibold, weight: 600 as const, style: "normal" as const },
       { name: "Oswald", data: bold, weight: 700 as const, style: "normal" as const },
     ];
+    items = rawItems.map((item, index) => ({ ...item, resolvedPhoto: photos[index] }));
   } catch {
-    return new Response("Falha ao carregar fontes", { status: 500 });
+    return new Response("Falha ao montar a imagem", { status: 500 });
   }
 
   return new ImageResponse(
@@ -118,25 +178,25 @@ export async function GET(request: Request) {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
             <div
               style={{
+                display: "flex",
                 color: RED,
                 fontSize: "30px",
                 fontWeight: 700,
                 letterSpacing: "8px",
                 textTransform: "uppercase",
-                textAlign: "center",
               }}
             >
               {subtitle}
             </div>
             <div
               style={{
+                display: "flex",
                 marginTop: "12px",
                 color: WHITE,
                 fontSize: "66px",
                 fontWeight: 700,
                 lineHeight: 1,
                 textTransform: "uppercase",
-                textAlign: "center",
                 textShadow: "0 3px 8px rgba(0,0,0,0.95)",
               }}
             >
@@ -156,10 +216,9 @@ export async function GET(request: Request) {
                   border: `1px solid ${GOLD}`,
                   backgroundColor: "rgba(0,0,0,0.45)",
                   padding: "0 40px",
-                  textAlign: "center",
                 }}
               >
-                <div style={{ fontSize: "44px", fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.85)" }}>
+                <div style={{ display: "flex", fontSize: "44px", fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.85)" }}>
                   Sem dados para este filtro
                 </div>
               </div>
@@ -167,7 +226,7 @@ export async function GET(request: Request) {
               items.map((item, index) => {
                 const isLeader = index === 0;
                 const badge = isLeader ? 96 : 72;
-                const photo = absolutize(origin, item.photo);
+                const photo = item.resolvedPhoto;
                 return (
                   <div
                     key={item.id}
@@ -299,6 +358,9 @@ export async function GET(request: Request) {
       width: 1080,
       height: 1920,
       fonts,
+      headers: {
+        "Cache-Control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
+      },
     }
   );
 }
