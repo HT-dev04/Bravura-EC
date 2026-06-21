@@ -91,20 +91,31 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
     setMessage(null);
     setBusy(true);
     try {
-      const text = `${title} - ${subtitle}\nVeja o ranking completo no site oficial do Bravura.`;
+      // O link vai embutido no texto para não se perder em apps que ignoram o campo `url`.
+      const text = `🏆 ${title} — ${subtitle}\nConfira o ranking completo no site oficial do Bravura:\n${shareUrl}`;
       const file = await createImageFile();
+
+      // 1ª opção: imagem + mensagem + link juntos.
+      if (navigator.canShare?.({ files: [file], text, url: shareUrl })) {
+        await navigator.share({ title, text, url: shareUrl, files: [file] });
+        return;
+      }
+
+      // 2ª opção: imagem + mensagem (link já está no texto).
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title, text, files: [file] });
         return;
       }
 
+      // 3ª opção: mensagem + link sem imagem.
       if (navigator.share) {
         await navigator.share({ title, text, url: shareUrl });
         return;
       }
 
-      await navigator.clipboard.writeText(shareUrl);
-      setMessage("Link do ranking copiado.");
+      // Fallback final: copia mensagem + link.
+      await navigator.clipboard.writeText(text);
+      setMessage("Mensagem e link do ranking copiados.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setMessage("Não foi possível compartilhar agora.");
