@@ -92,11 +92,17 @@ async function loadPhoto(src?: string): Promise<string | undefined> {
   if (!source) return undefined;
 
   try {
+    // Máscara circular: a foto já sai redonda (cantos transparentes),
+    // garantindo o recorte perfeito independente do renderizador.
+    const mask = Buffer.from(
+      `<svg width="${PHOTO_SIZE}" height="${PHOTO_SIZE}"><circle cx="${PHOTO_SIZE / 2}" cy="${PHOTO_SIZE / 2}" r="${PHOTO_SIZE / 2}" fill="#fff"/></svg>`
+    );
     const out = await sharp(source)
       .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: "centre" })
-      .jpeg({ quality: 82 })
+      .composite([{ input: mask, blend: "dest-in" }])
+      .png()
       .toBuffer();
-    return `data:image/jpeg;base64,${out.toString("base64")}`;
+    return `data:image/png;base64,${out.toString("base64")}`;
   } catch {
     return undefined;
   }
@@ -284,7 +290,7 @@ export async function GET(request: Request) {
                           alt=""
                           width={badge}
                           height={badge}
-                          style={{ width: `${badge}px`, height: `${badge}px`, objectFit: "cover" }}
+                          style={{ width: `${badge}px`, height: `${badge}px`, objectFit: "cover", borderRadius: "9999px" }}
                         />
                       ) : (
                         <div style={{ display: "flex", fontSize: "32px", fontWeight: 700, color: GOLD, textTransform: "uppercase" }}>
