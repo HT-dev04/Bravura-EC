@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { FileDown, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { clubInfo } from "@/data/club";
 import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
 import { createAdminId } from "@/lib/admin-id";
+import {
+  buildFinanceReportHtml,
+  periodLabel,
+  printFinanceReport,
+  type ReportConfig,
+  type ReportPeriod,
+} from "@/lib/finance-report";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type {
   FinanceData,
@@ -122,6 +130,13 @@ export default function AdminFinanceiroPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfConfig, setPdfConfig] = useState<ReportConfig>({
+    period: "completo",
+    day: today(),
+    month: currentMonth(),
+    year: String(new Date().getFullYear()),
+  });
 
   useEffect(() => {
     fetch("/api/admin/cms", { cache: "no-store", credentials: "same-origin" })
@@ -237,6 +252,12 @@ export default function AdminFinanceiroPage() {
     }
   }
 
+  function emitPdf() {
+    const html = buildFinanceReportHtml(finance, players, pdfConfig, clubInfo.name, new Date(), "/bravura-logo.svg");
+    printFinanceReport(html);
+    setPdfOpen(false);
+  }
+
   const filteredRevenues = finance.revenues.filter((item) =>
     isInPeriod(item.date, filterMode, selectedMonth, selectedYear)
   );
@@ -292,6 +313,9 @@ export default function AdminFinanceiroPage() {
         <div>
           <p className="text-xs uppercase tracking-widest text-brand-gold mb-2">Admin</p>
           <h1 className="font-display text-3xl md:text-4xl uppercase">Controle financeiro</h1>
+          <Button variant="outline" className="mt-3" onClick={() => setPdfOpen(true)}>
+            <FileDown className="w-4 h-4" /> Emitir PDF do balanço
+          </Button>
         </div>
         <div className="grid sm:grid-cols-3 gap-3 min-w-0 w-full lg:max-w-lg">
           <div>
@@ -534,6 +558,92 @@ export default function AdminFinanceiroPage() {
             <div><Label>Finalidade</Label><Textarea required className="mt-1" value={editingSponsorship.purpose} onChange={(e) => setEditingSponsorship({ ...editingSponsorship, purpose: e.target.value })} /></div>
             <FormActions saving={saving} onCancel={() => setEditingSponsorship(null)} />
           </form>
+        </Dialog>
+      )}
+
+      {pdfOpen && (
+        <Dialog open onClose={() => setPdfOpen(false)} title="Emitir PDF do balanço">
+          <div className="space-y-4">
+            <p className="text-sm text-brand-gray">
+              Gere o balanço financeiro completo (mensalidades, receitas, patrocínios e gastos) e escolha o período.
+              O arquivo abre na janela de impressão — selecione &quot;Salvar como PDF&quot;.
+            </p>
+            <div>
+              <Label>Período</Label>
+              <Select
+                className="mt-1"
+                value={pdfConfig.period}
+                onChange={(e) => setPdfConfig({ ...pdfConfig, period: e.target.value as ReportPeriod })}
+              >
+                <option value="completo">Completo (tudo)</option>
+                <option value="dia">Dia</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mês</option>
+                <option value="ano">Ano</option>
+              </Select>
+            </div>
+
+            {(pdfConfig.period === "dia" || pdfConfig.period === "semana") && (
+              <DateSelect
+                label={pdfConfig.period === "semana" ? "Dia de referência da semana" : "Dia"}
+                value={pdfConfig.day}
+                onChange={(day) => setPdfConfig({ ...pdfConfig, day })}
+              />
+            )}
+
+            {pdfConfig.period === "mes" && (
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Mês</Label>
+                  <Select
+                    className="mt-1"
+                    value={selectedMonthPart(pdfConfig.month)}
+                    onChange={(e) =>
+                      setPdfConfig({ ...pdfConfig, month: `${selectedMonthYear(pdfConfig.month)}-${e.target.value}` })
+                    }
+                  >
+                    {monthOptions.map((month) => (
+                      <option key={month.value} value={month.value}>{month.label}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Label>Ano</Label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    value={selectedMonthYear(pdfConfig.month)}
+                    onChange={(e) =>
+                      setPdfConfig({ ...pdfConfig, month: `${e.target.value}-${selectedMonthPart(pdfConfig.month)}` })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {pdfConfig.period === "ano" && (
+              <div>
+                <Label>Ano</Label>
+                <Input
+                  className="mt-1"
+                  type="number"
+                  value={pdfConfig.year}
+                  onChange={(e) => setPdfConfig({ ...pdfConfig, year: e.target.value })}
+                />
+              </div>
+            )}
+
+            <p className="text-xs text-brand-gray">
+              Será gerado: <span className="text-brand-gold">{periodLabel(pdfConfig)}</span>
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPdfOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="primary" onClick={emitPdf}>
+                <FileDown className="w-4 h-4" /> Gerar PDF
+              </Button>
+            </div>
+          </div>
         </Dialog>
       )}
     </div>
