@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Calendar, Gamepad2, Handshake, MapPin, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, Calendar, Gamepad2, Handshake, MapPin, Sparkles, Target, Trophy } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
 import { MatchCard } from "@/components/site/MatchCard";
@@ -39,7 +39,7 @@ export default async function HomePage() {
   const latestNews = news.slice(0, 3);
   const homeGallery = gallery.slice(0, 6);
   const teamStats = getTeamStats(matches);
-  const { topScorers, topAssists, topGames } = getPlayerRankings(players);
+  const { topScorers, topAssists, topGames, topGoalParticipations } = getPlayerRankings(players);
   const topHighlights = getTopHighlights(players, matches);
   const tickerMatches = [...matches].sort((a, b) => +new Date(b.date) - +new Date(a.date));
   const rankingShareUrl = absoluteUrl("/estatisticas");
@@ -134,9 +134,10 @@ export default async function HomePage() {
 
       <section className="container-x py-14">
         <SectionHeader eyebrow="Rankings" title="Destaques individuais" />
-        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           <RankingPanel title="Artilheiros" shareTitle="Top Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
           <RankingPanel title="Assistentes" shareTitle="Top Assistências" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
+          <RankingPanel title="Part. em gols" shareTitle="Top Participações em Gol" icon="participations" rows={topGoalParticipations.map((player) => ({ player, value: player.stats.goals + player.stats.assists, label: "part." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
           <RankingPanel title="Mais jogos" shareTitle="Mais Jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} showZeroValues />
           <RankingPanel title="Craques do jogo" shareTitle="Craques do Jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
         </div>
@@ -410,14 +411,14 @@ function RankingPanel({
 }: {
   title: string;
   shareTitle: string;
-  icon: "goals" | "assists" | "games" | "stars";
+  icon: "goals" | "assists" | "games" | "stars" | "participations";
   rows: Array<{ player: Player; value: number; label: string }>;
   shareUrl: string;
   siteLabel: string;
   showZeroValues?: boolean;
 }) {
-  const Icon = icon === "goals" ? Trophy : icon === "assists" ? Handshake : icon === "games" ? Gamepad2 : Sparkles;
-  const accent = icon === "goals" || icon === "stars" ? "text-brand-red" : "text-brand-gold";
+  const Icon = icon === "goals" ? Trophy : icon === "assists" ? Handshake : icon === "games" ? Gamepad2 : icon === "participations" ? Target : Sparkles;
+  const accent = icon === "goals" || icon === "stars" || icon === "participations" ? "text-brand-red" : "text-brand-gold";
   const rankedRows = showZeroValues ? rows : rows.filter((row) => row.value > 0);
   const visibleRows = rankedRows.slice(0, 4);
   const shareItems = rankedRows
