@@ -132,14 +132,14 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="container-x py-14">
+      <section id="rankings" className="container-x py-14 scroll-mt-24">
         <SectionHeader eyebrow="Rankings" title="Destaques individuais" />
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          <RankingPanel title="Artilheiros" shareTitle="Top Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
-          <RankingPanel title="Assistentes" shareTitle="Top Assistências" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
-          <RankingPanel title="Part. em gols" shareTitle="Top Participações em Gol" icon="participations" rows={topGoalParticipations.map((player) => ({ player, value: player.stats.goals + player.stats.assists, label: "part." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
-          <RankingPanel title="Mais jogos" shareTitle="Mais Jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} showZeroValues />
-          <RankingPanel title="Craques do jogo" shareTitle="Craques do Jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} />
+          <RankingPanel title="Artilheiros" shareTitle="Top Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/artilheiros" />
+          <RankingPanel title="Assistentes" shareTitle="Top Assistências" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/assistentes" />
+          <RankingPanel title="Part. em gols" shareTitle="Top Participações em Gol" icon="participations" rows={topGoalParticipations.map((player) => ({ player, value: player.stats.goals + player.stats.assists, label: "part." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/participacoes" />
+          <RankingPanel title="Mais jogos" shareTitle="Mais Jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} showZeroValues fullRankingHref="/rankings/jogos" />
+          <RankingPanel title="Craques do jogo" shareTitle="Craques do Jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/craques" />
         </div>
       </section>
 
@@ -408,6 +408,7 @@ function RankingPanel({
   shareUrl,
   siteLabel,
   showZeroValues = false,
+  fullRankingHref,
 }: {
   title: string;
   shareTitle: string;
@@ -416,6 +417,7 @@ function RankingPanel({
   shareUrl: string;
   siteLabel: string;
   showZeroValues?: boolean;
+  fullRankingHref: string;
 }) {
   const Icon = icon === "goals" ? Trophy : icon === "assists" ? Handshake : icon === "games" ? Gamepad2 : icon === "participations" ? Target : Sparkles;
   const accent = icon === "goals" || icon === "stars" || icon === "participations" ? "text-brand-red" : "text-brand-gold";
@@ -472,6 +474,13 @@ function RankingPanel({
           <p className="p-4 text-sm text-brand-gray">Sem dados registrados.</p>
         )}
       </div>
+      <Link
+        href={fullRankingHref}
+        className="flex items-center justify-center gap-1.5 border-t border-brand-border px-4 py-3 text-xs font-semibold uppercase tracking-widest text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-white"
+      >
+        Ver mais
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </div>
   );
 }
