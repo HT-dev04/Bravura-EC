@@ -59,12 +59,17 @@ type MonthlyMovement = {
   value: number;
 };
 
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+function today() {
+  // Usa o fuso local (não UTC) para evitar deslocamento de um dia à noite no Brasil.
+  const now = new Date();
+  const year = String(now.getFullYear());
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function currentMonth() {
+  return today().slice(0, 7);
 }
 
 function selectedMonthPart(value: string) {
@@ -114,6 +119,13 @@ function isInPeriod(date: string, mode: FilterMode, selectedMonth: string, selec
   if (mode === "atual") return date <= now;
   if (mode === "mes") return date.startsWith(selectedMonth);
   return date.startsWith(selectedYear);
+}
+
+/** Mesma lógica de período aplicada às mensalidades, cuja referência é o mês (YYYY-MM). */
+function isMonthlyInPeriod(month: string, mode: FilterMode, selectedMonth: string, selectedYear: string) {
+  if (mode === "atual") return month <= currentMonth();
+  if (mode === "mes") return month === selectedMonth;
+  return month.startsWith(selectedYear);
 }
 
 export default function AdminFinanceiroPage() {
@@ -187,11 +199,15 @@ export default function AdminFinanceiroPage() {
 
   function changeSelectedMonth(month: string) {
     setSelectedMonth(`${selectedMonthYear(selectedMonth)}-${month}`);
+    // Escolher um mês só tem efeito no modo "mes" — ativa-o automaticamente.
+    setFilterMode("mes");
   }
 
   function changeSelectedYear(year: string) {
     setSelectedYear(year);
     if (/^\d{4}$/.test(year)) setSelectedMonth(`${year}-${selectedMonthPart(selectedMonth)}`);
+    // No modo "atual" o ano é ignorado — passa a filtrar por ano ao mexer no campo.
+    setFilterMode((mode) => (mode === "atual" ? "ano" : mode));
   }
 
   function paymentStatus(playerId: string): MonthlyPaymentStatus {
@@ -267,7 +283,12 @@ export default function AdminFinanceiroPage() {
   const filteredSponsorships = finance.sponsorships.filter((item) =>
     isInPeriod(item.date, filterMode, selectedMonth, selectedYear)
   );
-  const paidCount = players.filter((player) => paymentStatus(player.id) === "pago").length;
+  // Mensalidades pagas dentro do período filtrado (não apenas do mês selecionado),
+  // para o "Saldo filtrado" bater com receitas/gastos/patrocínios no mesmo período.
+  const paidPaymentsInPeriod = finance.monthlyPayments.filter(
+    (item) => item.status === "pago" && isMonthlyInPeriod(item.month, filterMode, selectedMonth, selectedYear)
+  );
+  const paidCount = paidPaymentsInPeriod.length;
   const exemptCount = players.filter((player) => paymentStatus(player.id) === "isento").length;
   const monthlyTotal = paidCount * finance.monthlyFeeAmount;
   const revenueTotal = filteredRevenues.reduce((sum, item) => sum + item.value, 0);
@@ -342,7 +363,7 @@ export default function AdminFinanceiroPage() {
       {message && <p className="text-sm text-brand-gray">{message}</p>}
 
       <div className="grid md:grid-cols-5 gap-3">
-        <SummaryCard label="Mensalidades pagas" value={formatCurrency(monthlyTotal)} detail={`${paidCount} pagos · ${exemptCount} isentos`} />
+        <SummaryCard label="Mensalidades pagas" value={formatCurrency(monthlyTotal)} detail={filterMode === "mes" ? `${paidCount} pagos · ${exemptCount} isentos` : `${paidCount} pagamentos no período`} />
         <SummaryCard label="Receitas filtradas" value={formatCurrency(revenueTotal)} detail={`${filteredRevenues.length} registros`} />
         <SummaryCard label="Patrocínios" value={formatCurrency(sponsorshipTotal)} detail={`${filteredSponsorships.length} registros`} />
         <SummaryCard label="Gastos filtrados" value={formatCurrency(expenseTotal)} detail={`${filteredExpenses.length} registros`} />

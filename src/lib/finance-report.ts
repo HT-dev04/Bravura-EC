@@ -338,8 +338,75 @@ export function buildFinanceReportHtml(
 </html>`;
 }
 
+/** Detecta navegadores mobile/touch, onde imprimir a partir de iframe oculto não funciona. */
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  // iPadOS moderno se identifica como "Macintosh" — detecta pelo touch.
+  const isTouchMac = navigator.maxTouchPoints > 1 && /Macintosh/.test(ua);
+  return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua) || isTouchMac;
+}
+
+/**
+ * Injeta uma barra de ação (Salvar/Imprimir PDF) e uma tentativa de impressão
+ * automática no HTML do relatório — usado no fluxo mobile, em que o botão nativo
+ * da barra é o caminho confiável para o usuário gerar o PDF.
+ */
+function withMobilePrintControls(html: string) {
+  const extras = `
+    <div id="__print_bar" role="toolbar">
+      <button type="button" onclick="window.print()">Salvar / Imprimir PDF</button>
+    </div>
+    <style>
+      body { padding-bottom: 84px; }
+      #__print_bar {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 99999;
+        padding: 12px; background: #1a1a1a; text-align: center;
+        box-shadow: 0 -2px 12px rgba(0,0,0,0.25);
+      }
+      #__print_bar button {
+        background: #c8102e; color: #fff; border: 0; border-radius: 8px;
+        padding: 14px 28px; font-size: 16px; font-weight: 700; cursor: pointer;
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      }
+      @media print { #__print_bar { display: none !important; } body { padding-bottom: 0; } }
+    </style>
+    <script>
+      window.addEventListener("load", function () {
+        setTimeout(function () { try { window.focus(); window.print(); } catch (e) {} }, 700);
+      });
+    </script>`;
+  return html.includes("</body>") ? html.replace("</body>", extras + "</body>") : html + extras;
+}
+
+/**
+ * Abre o relatório numa nova aba e deixa o usuário gerar o PDF pelo botão/menu
+ * nativo do navegador. Necessário no mobile, onde `window.print()` a partir de
+ * iframe oculto é ignorado. Deve ser chamada de dentro de um gesto do usuário
+ * (clique) para não ser bloqueada por popup blockers.
+ */
+function printViaNewTab(html: string) {
+  const win = window.open("", "_blank");
+  if (!win) {
+    // Popup bloqueado: cai para o método via iframe como último recurso.
+    printViaIframe(html);
+    return;
+  }
+  win.document.open();
+  win.document.write(withMobilePrintControls(html));
+  win.document.close();
+}
+
 /** Abre o relatório num iframe oculto e dispara a impressão (Salvar como PDF). */
 export function printFinanceReport(html: string) {
+  if (isMobileDevice()) {
+    printViaNewTab(html);
+    return;
+  }
+  printViaIframe(html);
+}
+
+function printViaIframe(html: string) {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.position = "fixed";
