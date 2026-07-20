@@ -11,6 +11,7 @@ import { saveAdminCollection, uploadAdminFile } from "@/lib/admin-client";
 import { createAdminId } from "@/lib/admin-id";
 import {
   buildFinanceReportHtml,
+  monthlyFeeFor,
   periodLabel,
   printFinanceReport,
   type ReportConfig,
@@ -28,6 +29,7 @@ import type {
 
 const emptyFinance: FinanceData = {
   monthlyFeeAmount: 50,
+  monthlyFeeByMonth: {},
   monthlyPayments: [],
   revenues: [],
   expenses: [],
@@ -159,7 +161,7 @@ export default function AdminFinanceiroPage() {
         if (cms?.finance) {
           const nextFinance = { ...emptyFinance, ...cms.finance };
           setFinance(nextFinance);
-          setMonthlyFeeDraft(String(nextFinance.monthlyFeeAmount ?? 0));
+          setMonthlyFeeDraft(String(monthlyFeeFor(nextFinance, currentMonth())));
         }
       })
       .catch((error) => {
@@ -185,27 +187,40 @@ export default function AdminFinanceiroPage() {
   }
 
   async function saveMonthlyFee() {
+    const currentAmount = monthlyFeeFor(finance, selectedMonth);
     const nextAmount = monthlyFeeDraft === "" ? 0 : Number(monthlyFeeDraft);
     if (!Number.isFinite(nextAmount)) {
-      setMonthlyFeeDraft(String(finance.monthlyFeeAmount ?? 0));
+      setMonthlyFeeDraft(String(currentAmount));
       return;
     }
-    if (nextAmount === finance.monthlyFeeAmount) return;
+    if (nextAmount === currentAmount) return;
 
-    setFinance((current) => ({ ...current, monthlyFeeAmount: nextAmount }));
-    await persist({ ...finance, monthlyFeeAmount: nextAmount });
-    setMonthlyFeeDraft(String(nextAmount));
+    const saved = await persist({
+      ...finance,
+      monthlyFeeByMonth: { ...finance.monthlyFeeByMonth, [selectedMonth]: nextAmount },
+    });
+    setMonthlyFeeDraft(String(saved ? nextAmount : currentAmount));
+  }
+
+  function syncMonthlyFeeDraft(month: string) {
+    setMonthlyFeeDraft(String(monthlyFeeFor(finance, month)));
   }
 
   function changeSelectedMonth(month: string) {
-    setSelectedMonth(`${selectedMonthYear(selectedMonth)}-${month}`);
+    const nextMonth = `${selectedMonthYear(selectedMonth)}-${month}`;
+    setSelectedMonth(nextMonth);
+    syncMonthlyFeeDraft(nextMonth);
     // Escolher um mês só tem efeito no modo "mes" — ativa-o automaticamente.
     setFilterMode("mes");
   }
 
   function changeSelectedYear(year: string) {
     setSelectedYear(year);
-    if (/^\d{4}$/.test(year)) setSelectedMonth(`${year}-${selectedMonthPart(selectedMonth)}`);
+    if (/^\d{4}$/.test(year)) {
+      const nextMonth = `${year}-${selectedMonthPart(selectedMonth)}`;
+      setSelectedMonth(nextMonth);
+      syncMonthlyFeeDraft(nextMonth);
+    }
     // No modo "atual" o ano é ignorado — passa a filtrar por ano ao mexer no campo.
     setFilterMode((mode) => (mode === "atual" ? "ano" : mode));
   }
@@ -290,7 +305,7 @@ export default function AdminFinanceiroPage() {
   );
   const paidCount = paidPaymentsInPeriod.length;
   const exemptCount = players.filter((player) => paymentStatus(player.id) === "isento").length;
-  const monthlyTotal = paidCount * finance.monthlyFeeAmount;
+  const monthlyTotal = paidPaymentsInPeriod.reduce((sum, item) => sum + monthlyFeeFor(finance, item.month), 0);
   const revenueTotal = filteredRevenues.reduce((sum, item) => sum + item.value, 0);
   const expenseTotal = filteredExpenses.reduce((sum, item) => sum + item.value, 0);
   const sponsorshipTotal = filteredSponsorships.reduce((sum, item) => sum + item.value, 0);
@@ -303,7 +318,7 @@ export default function AdminFinanceiroPage() {
     (player) =>
       finance.monthlyPayments.find((item) => item.playerId === player.id && item.month === selectedMonth)?.status === "pago"
   );
-  const monthMonthlyTotal = monthPaidPlayers.length * finance.monthlyFeeAmount;
+  const monthMonthlyTotal = monthPaidPlayers.length * monthlyFeeFor(finance, selectedMonth);
   const monthRevenueTotal = monthRevenues.reduce((sum, item) => sum + item.value, 0);
   const monthSponsorshipTotal = monthSponsorships.reduce((sum, item) => sum + item.value, 0);
   const monthExpenseTotal = monthExpenses.reduce((sum, item) => sum + item.value, 0);
@@ -314,7 +329,7 @@ export default function AdminFinanceiroPage() {
       date: selectedMonth,
       description: `Mensalidade - ${player.name}`,
       type: "Entrada" as const,
-      value: finance.monthlyFeeAmount,
+      value: monthlyFeeFor(finance, selectedMonth),
     })),
     ...monthRevenues.map((item) => ({ ...item, type: "Entrada" as const })),
     ...monthSponsorships.map((item) => ({
@@ -413,7 +428,7 @@ export default function AdminFinanceiroPage() {
               <p className="text-sm text-brand-gray">Marque como pago, desfaça para pendente ou marque jogador como isento no mês selecionado.</p>
             </div>
             <div className="w-full md:w-52">
-              <Label>Valor mensal</Label>
+              <Label>Valor de {formatMonthReference(selectedMonth)}</Label>
               <Input
                 className="mt-1"
                 type="number"
@@ -424,7 +439,7 @@ export default function AdminFinanceiroPage() {
                 onChange={(e) => setMonthlyFeeDraft(e.target.value)}
                 onBlur={() => void saveMonthlyFee()}
               />
-              <p className="mt-1 text-xs text-brand-gray">Salva automaticamente ao sair do campo.</p>
+              <p className="mt-1 text-xs text-brand-gray">Vale só para o mês selecionado. Salva automaticamente ao sair do campo.</p>
             </div>
           </div>
           {/* Mobile: cards */}

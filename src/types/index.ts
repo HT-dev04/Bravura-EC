@@ -178,6 +178,8 @@ export interface SponsorshipEntry {
 
 export interface FinanceData {
   monthlyFeeAmount: number;
+  /** Valores específicos por mês (chave YYYY-MM); meses ausentes usam monthlyFeeAmount. */
+  monthlyFeeByMonth: Record<string, number>;
   monthlyPayments: MonthlyPayment[];
   revenues: RevenueEntry[];
   expenses: ExpenseEntry[];

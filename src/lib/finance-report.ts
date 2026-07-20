@@ -11,6 +11,12 @@ function formatDate(iso: string) {
   return `${day}/${month}/${year}`;
 }
 
+/** Valor da mensalidade vigente num mês (YYYY-MM); meses sem valor próprio usam o padrão. */
+export function monthlyFeeFor(finance: FinanceData, month: string) {
+  const override = finance.monthlyFeeByMonth?.[month];
+  return typeof override === "number" && Number.isFinite(override) ? override : finance.monthlyFeeAmount;
+}
+
 export type ReportPeriod = "completo" | "dia" | "semana" | "mes" | "ano";
 
 export interface ReportConfig {
@@ -81,7 +87,7 @@ function buildMovements(finance: FinanceData, players: Player[]): ReportMovement
       description: `Mensalidade - ${playerName(payment.playerId)} (${payment.month})`,
       category: "Mensalidade" as const,
       type: "Entrada" as const,
-      value: finance.monthlyFeeAmount,
+      value: monthlyFeeFor(finance, payment.month),
     }));
 
   const receitas = finance.revenues.map((item) => ({

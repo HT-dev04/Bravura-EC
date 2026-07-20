@@ -25,6 +25,7 @@ import type { Prisma } from "@/generated/prisma/client";
 
 const defaultFinance: FinanceData = {
   monthlyFeeAmount: 50,
+  monthlyFeeByMonth: {},
   monthlyPayments: [],
   revenues: [],
   expenses: [],
@@ -296,8 +297,15 @@ function sanitizeFinance(finance: FinanceData): FinanceData {
     });
   }
 
+  const monthlyFeeByMonth: Record<string, number> = {};
+  for (const [month, value] of Object.entries(finance.monthlyFeeByMonth || {})) {
+    if (!/^\d{4}-\d{2}$/.test(month)) continue;
+    monthlyFeeByMonth[month] = numberOrZero(value);
+  }
+
   return {
     monthlyFeeAmount: numberOrZero(finance.monthlyFeeAmount),
+    monthlyFeeByMonth,
     monthlyPayments: Array.from(monthlyPayments.values()),
     revenues: Array.from(revenues.values()),
     expenses: Array.from(expenses.values()),
@@ -432,6 +440,9 @@ export async function getCmsData(): Promise<CmsData> {
     teamStats: fromTeamStats(teamStats),
     finance: {
       monthlyFeeAmount: financeSettings?.monthlyFeeAmount ?? defaultFinance.monthlyFeeAmount,
+      monthlyFeeByMonth:
+        (financeSettings?.monthlyFeeByMonth as FinanceData["monthlyFeeByMonth"] | undefined) ??
+        defaultFinance.monthlyFeeByMonth,
       monthlyPayments: monthlyPayments as MonthlyPayment[],
       revenues: revenues as RevenueEntry[],
       expenses: expenses as ExpenseEntry[],
@@ -538,8 +549,8 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
         async (tx) => {
           await tx.financeSettings.upsert({
             where: { id: "default" },
-            update: { monthlyFeeAmount: finance.monthlyFeeAmount },
-            create: { id: "default", monthlyFeeAmount: finance.monthlyFeeAmount },
+            update: { monthlyFeeAmount: finance.monthlyFeeAmount, monthlyFeeByMonth: json(finance.monthlyFeeByMonth) },
+            create: { id: "default", monthlyFeeAmount: finance.monthlyFeeAmount, monthlyFeeByMonth: json(finance.monthlyFeeByMonth) },
           });
 
           await tx.monthlyPayment.deleteMany({

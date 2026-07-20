@@ -139,9 +139,10 @@ model TeamStats {
 }
 
 model FinanceSettings {
-  id               String @id @default("default")
-  monthlyFeeAmount Float
-  updatedAt        DateTime @updatedAt
+  id                String @id @default("default")
+  monthlyFeeAmount  Float
+  monthlyFeeByMonth Json   @default("{}")
+  updatedAt         DateTime @updatedAt
 }
 
 model MonthlyPayment {
