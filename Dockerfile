@@ -1,5 +1,9 @@
 # Imagem de produção do site do Bravura (deploy no Coolify do servidor hub da Avontz).
-FROM node:20-bookworm-slim AS builder
+FROM node:20-bookworm-slim AS base
+# O Prisma precisa do OpenSSL para detectar a plataforma.
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+
+FROM base AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS=--max-old-space-size=3072
@@ -11,7 +15,7 @@ COPY . .
 # A URL abaixo só satisfaz a checagem de import do Prisma; nenhuma conexão é feita no build.
 RUN DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build npx next build
 
-FROM node:20-bookworm-slim AS runner
+FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
