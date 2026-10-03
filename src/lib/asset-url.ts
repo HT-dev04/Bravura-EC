@@ -1,12 +1,11 @@
 export function assetUrl(path: string) {
   if (!path || path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || process.env.SUPABASE_STORAGE_BUCKET || "uploads";
-  if (!supabaseUrl) return path;
+  // Caminhos com "/" na frente são arquivos de public/ ou uploads já servidos em /media/.
+  if (path.startsWith("/")) return path;
 
-  const cleanPath = path.replace(/^\/+/, "");
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+  // Chave crua do bucket de uploads (ex.: "admin/<uuid>.jpg").
+  return `/media/${path}`;
 }
 
 export const bravuraLogo = "/bravura-logo.svg";

@@ -1,0 +1,45 @@
+# Stack do Bravura no Coolify (servidor avontz-hub): site + Postgres + volume de uploads, tudo isolado.
+# As variáveis ${...} são definidas no painel do Coolify.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://bravura:${POSTGRES_PASSWORD}@db:5432/bravura
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - bravura-uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bravura
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: bravura
+    volumes:
+      - bravura-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bravura -d bravura"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bravura-postgres:
+  bravura-uploads:

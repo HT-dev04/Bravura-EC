@@ -1,7 +1,7 @@
 import path from "path";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { ensureUploadBucket, getSupabaseAdmin, getUploadBucket } from "@/lib/supabase-admin";
+import { mediaUrl, putObject } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -37,30 +37,19 @@ export async function POST(request: Request) {
     }
 
     const uploadPath = createUploadPath(file);
-    const bucket = getUploadBucket();
-    const supabase = getSupabaseAdmin();
-    await ensureUploadBucket(supabase, bucket);
 
-    const { error } = await supabase.storage.from(bucket).upload(uploadPath, Buffer.from(await file.arrayBuffer()), {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
-
-    if (error) {
-      console.error("Erro no upload Supabase Storage", { bucket, path: uploadPath, message: error.message });
-      return errorResponse("UPLOAD_FAILED", `Falha ao enviar para o bucket '${bucket}': ${error.message}`, 500);
+    try {
+      await putObject(uploadPath, Buffer.from(await file.arrayBuffer()));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Erro ao gravar upload", { path: uploadPath, message });
+      return errorResponse("UPLOAD_FAILED", `Falha ao gravar o arquivo: ${message}`, 500);
     }
 
-    const { data } = supabase.storage.from(bucket).getPublicUrl(uploadPath);
-
-    return NextResponse.json({ success: true, url: data.publicUrl, path: uploadPath, type: file.type.startsWith("video/") ? "video" : "image" });
+    return NextResponse.json({ success: true, url: mediaUrl(uploadPath), path: uploadPath, type: file.type.startsWith("video/") ? "video" : "image" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha ao enviar arquivo";
     console.error("Erro em POST /api/admin/upload", { message });
-
-    if (message.includes("Missing Supabase environment variables")) {
-      return errorResponse("SUPABASE_CONFIG_ERROR", message, 500);
-    }
 
     return errorResponse("UPLOAD_ERROR", message, 500);
   }

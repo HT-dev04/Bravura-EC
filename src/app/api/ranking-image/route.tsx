@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { getObject, MEDIA_PREFIX } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,8 @@ async function loadPhoto(src?: string): Promise<string | undefined> {
   let source: Buffer | null = null;
   if (/^https?:\/\//i.test(src)) {
     source = await fetchWithTimeout(src, PHOTO_TIMEOUT_MS);
+  } else if (src.startsWith(MEDIA_PREFIX)) {
+    source = (await getObject(src.slice(MEDIA_PREFIX.length)).catch(() => null))?.body ?? null;
   } else if (src.startsWith("/")) {
     try {
       source = await readFile(path.join(PUBLIC_DIR, src.replace(/^\/+/, "")));
