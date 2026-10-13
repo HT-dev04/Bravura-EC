@@ -1,43 +1,91 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { isRankingArtStyle, type RankingArtStyle, type RankingShareItem } from "@/lib/ranking-share";
 import { getObject, MEDIA_PREFIX } from "@/lib/storage";
+import { ART_HEIGHT, ART_WIDTH, FrameOverlay, PodiumArt, SpotlightArt, type ArtItem, type ArtProps, type FrameSiteBox } from "./layouts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-type ShareItem = {
-  id: string;
-  name: string;
-  photo?: string;
-  value: number;
-  label: string;
-};
-
 type Payload = {
   title: string;
   subtitle: string;
-  variant: 1 | 2;
-  items: ShareItem[];
+  style: RankingArtStyle;
+  site: string;
+  items: RankingShareItem[];
 };
 
-const GOLD = "#d4af37";
-const RED = "#c8102e";
-const WHITE = "#ffffff";
 const PUBLIC_DIR = path.join(process.cwd(), "public");
-const PHOTO_SIZE = 220;
+const PHOTO_SMALL = 220;
+const PHOTO_LARGE = 360;
 const PHOTO_TIMEOUT_MS = 6000;
+const DEFAULT_SITE = "bravura.avontz.com.br";
 
-// Caches por lambda “quente” — moldura e fontes não mudam entre requisições.
+// Molduras prontas: arquivo em public/, onde começa a área livre para a lista e
+// onde fica o endereço do site estampado na arte (coberto com o domínio atual).
+const FRAMES: Partial<Record<RankingArtStyle, { file: string; listTop: number; siteBox: FrameSiteBox }>> = {
+  classica: {
+    file: "moldura-ranking2.png",
+    listTop: 735,
+    siteBox: { left: 290, top: 1724, width: 500, height: 64, background: "#260503", color: "#d4af37", fontSize: 36, pill: true },
+  },
+  ouro: {
+    file: "moldura-ranking3.png",
+    listTop: 635,
+    siteBox: { left: 200, top: 1688, width: 680, height: 86, background: "#070707", color: "#ffffff", fontSize: 56, pill: false },
+  },
+};
+
+// Caches do processo — molduras, fontes e escudo não mudam; fotos e artes prontas têm limite de itens.
 const fontCache = new Map<string, Buffer>();
-const frameCache = new Map<number, string>();
+const frameCache = new Map<string, Buffer>();
+const photoCache = new Map<string, string | undefined>();
+const artCache = new Map<string, { image: Buffer; at: number }>();
+const artInFlight = new Map<string, Promise<Buffer>>();
+let logoCache: string | undefined;
+
+const PHOTO_CACHE_LIMIT = 120;
+const ART_CACHE_LIMIT = 40;
+const ART_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function remember<V>(cache: Map<string, V>, key: string, value: V, limit: number) {
+  cache.delete(key);
+  cache.set(key, value);
+  if (cache.size > limit) cache.delete(cache.keys().next().value as string);
+}
+
+function text(value: unknown, max: number) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
 
 function decodePayload(d: string): Payload {
   const normalized = d.replace(/-/g, "+").replace(/_/g, "/");
-  const json = Buffer.from(normalized, "base64").toString("utf8");
-  return JSON.parse(json) as Payload;
+  const raw = JSON.parse(Buffer.from(normalized, "base64").toString("utf8")) as Record<string, unknown>;
+
+  // Links antigos mandavam `variant` (1 ou 2) no lugar de `style`.
+  const style = isRankingArtStyle(raw.style) ? raw.style : raw.variant === 2 ? "ouro" : "classica";
+  const items = (Array.isArray(raw.items) ? raw.items : [])
+    .map((item: Record<string, unknown>): RankingShareItem => ({
+      id: text(item?.id, 80),
+      name: text(item?.name, 28),
+      photo: text(item?.photo, 600) || undefined,
+      value: Number(item?.value),
+      label: text(item?.label, 16),
+    }))
+    .filter((item) => item.name && Number.isFinite(item.value))
+    .slice(0, 5);
+
+  return {
+    title: text(raw.title, 40),
+    subtitle: text(raw.subtitle, 40),
+    style,
+    site: text(raw.site, 60) || DEFAULT_SITE,
+    items,
+  };
 }
 
 async function loadFont(file: string) {
@@ -48,16 +96,37 @@ async function loadFont(file: string) {
   return buffer;
 }
 
-// Redimensiona a moldura para 1080x1920 exatos — reduz o trabalho do renderizador.
-async function loadFrame(variant: 1 | 2) {
-  const cached = frameCache.get(variant);
+async function loadFonts() {
+  const [medium, semibold, bold] = await Promise.all([loadFont("Oswald-500.ttf"), loadFont("Oswald-600.ttf"), loadFont("Oswald-700.ttf")]);
+  return [
+    { name: "Oswald", data: medium, weight: 500 as const, style: "normal" as const },
+    { name: "Oswald", data: semibold, weight: 600 as const, style: "normal" as const },
+    { name: "Oswald", data: bold, weight: 700 as const, style: "normal" as const },
+  ];
+}
+
+// Moldura já no tamanho final e sem compressão: a lista é só colada por cima a cada requisição.
+async function loadFrame(file: string) {
+  const cached = frameCache.get(file);
   if (cached) return cached;
-  const file = variant === 2 ? "moldura-ranking3.png" : "moldura-ranking2.png";
-  const buffer = await readFile(path.join(PUBLIC_DIR, file));
-  const resized = await sharp(buffer).resize(1080, 1920, { fit: "cover" }).jpeg({ quality: 88 }).toBuffer();
-  const dataUrl = `data:image/jpeg;base64,${resized.toString("base64")}`;
-  frameCache.set(variant, dataUrl);
-  return dataUrl;
+  const raw = await sharp(await readFile(path.join(PUBLIC_DIR, file)))
+    .resize(ART_WIDTH, ART_HEIGHT, { fit: "cover" })
+    .removeAlpha()
+    .raw()
+    .toBuffer();
+  frameCache.set(file, raw);
+  return raw;
+}
+
+async function loadLogo() {
+  if (logoCache) return logoCache;
+  try {
+    const buffer = await readFile(path.join(PUBLIC_DIR, "bravura-escudo.png"));
+    logoCache = `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
+  return logoCache;
 }
 
 async function fetchWithTimeout(url: string, ms: number) {
@@ -74,46 +143,115 @@ async function fetchWithTimeout(url: string, ms: number) {
   }
 }
 
-// Baixa a foto, recorta num quadrado pequeno e devolve como data URL.
+async function readPhotoSource(src: string) {
+  if (/^https?:\/\//i.test(src)) return fetchWithTimeout(src, PHOTO_TIMEOUT_MS);
+  if (src.startsWith(MEDIA_PREFIX)) return (await getObject(src.slice(MEDIA_PREFIX.length)).catch(() => null))?.body ?? null;
+  if (src.startsWith("/")) {
+    // Só arquivos de dentro de public/.
+    const filePath = path.resolve(PUBLIC_DIR, src.replace(/^\/+/, ""));
+    if (!filePath.startsWith(PUBLIC_DIR + path.sep)) return null;
+    return readFile(filePath).catch(() => null);
+  }
+  return null;
+}
+
+// Recorta a foto num círculo do tamanho pedido e devolve como data URL.
 // Qualquer falha (timeout, formato inválido, host fora do ar) cai no fallback (inicial).
-async function loadPhoto(src?: string): Promise<string | undefined> {
+async function loadPhoto(src: string | undefined, size: number): Promise<string | undefined> {
   if (!src) return undefined;
   if (src.startsWith("data:")) return src;
 
-  let source: Buffer | null = null;
-  if (/^https?:\/\//i.test(src)) {
-    source = await fetchWithTimeout(src, PHOTO_TIMEOUT_MS);
-  } else if (src.startsWith(MEDIA_PREFIX)) {
-    source = (await getObject(src.slice(MEDIA_PREFIX.length)).catch(() => null))?.body ?? null;
-  } else if (src.startsWith("/")) {
-    try {
-      source = await readFile(path.join(PUBLIC_DIR, src.replace(/^\/+/, "")));
-    } catch {
-      source = null;
-    }
-  }
-  if (!source) return undefined;
+  const key = `${size}:${src}`;
+  if (photoCache.has(key)) return photoCache.get(key);
 
+  let photo: string | undefined;
   try {
-    // Máscara circular: a foto já sai redonda (cantos transparentes),
-    // garantindo o recorte perfeito independente do renderizador.
-    const mask = Buffer.from(
-      `<svg width="${PHOTO_SIZE}" height="${PHOTO_SIZE}"><circle cx="${PHOTO_SIZE / 2}" cy="${PHOTO_SIZE / 2}" r="${PHOTO_SIZE / 2}" fill="#fff"/></svg>`
-    );
-    const out = await sharp(source)
-      .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: "centre" })
-      .composite([{ input: mask, blend: "dest-in" }])
-      .png()
-      .toBuffer();
-    return `data:image/png;base64,${out.toString("base64")}`;
+    const source = await readPhotoSource(src);
+    if (source) {
+      // Máscara circular: a foto já sai redonda (cantos transparentes),
+      // garantindo o recorte perfeito independente do renderizador.
+      const mask = Buffer.from(`<svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#fff"/></svg>`);
+      const out = await sharp(source)
+        .rotate()
+        .resize(size, size, { fit: "cover", position: "centre" })
+        .composite([{ input: mask, blend: "dest-in" }])
+        .png({ compressionLevel: 3 })
+        .toBuffer();
+      photo = `data:image/png;base64,${out.toString("base64")}`;
+    }
   } catch {
-    return undefined;
+    photo = undefined;
   }
+
+  // Falhas não ficam em cache: a próxima requisição tenta de novo.
+  if (photo) remember(photoCache, key, photo, PHOTO_CACHE_LIMIT);
+  return photo;
+}
+
+async function renderPng(element: ReactElement, fonts: Awaited<ReturnType<typeof loadFonts>>) {
+  const response = new ImageResponse(element, { width: ART_WIDTH, height: ART_HEIGHT, fonts });
+  return Buffer.from(await response.arrayBuffer());
+}
+
+function toJpeg(image: sharp.Sharp) {
+  // 4:4:4 mantém as letras vermelhas e douradas nítidas sobre o fundo escuro.
+  return image.jpeg({ quality: 88, chromaSubsampling: "4:4:4" }).toBuffer();
+}
+
+async function renderArt(payload: Payload) {
+  // Quantos jogadores ganham foto grande em cada estilo.
+  const largePhotos = payload.style === "podio" ? 3 : payload.style === "destaque" ? 1 : 0;
+  const frame = FRAMES[payload.style];
+
+  const [fonts, logo, photos, frameRaw] = await Promise.all([
+    loadFonts(),
+    frame ? undefined : loadLogo(),
+    Promise.all(
+      payload.items.map(async (item, index): Promise<Pick<ArtItem, "photoSmall" | "photoLarge">> =>
+        index < largePhotos ? { photoLarge: await loadPhoto(item.photo, PHOTO_LARGE) } : { photoSmall: await loadPhoto(item.photo, PHOTO_SMALL) }
+      )
+    ),
+    frame ? loadFrame(frame.file) : undefined,
+  ]);
+
+  const props: ArtProps = {
+    title: payload.title,
+    subtitle: payload.subtitle,
+    site: payload.site,
+    logo,
+    items: payload.items.map((item, index) => ({ ...item, ...photos[index] })),
+  };
+
+  if (frame && frameRaw) {
+    const overlay = await renderPng(<FrameOverlay {...props} listTop={frame.listTop} siteBox={frame.siteBox} />, fonts);
+    return toJpeg(sharp(frameRaw, { raw: { width: ART_WIDTH, height: ART_HEIGHT, channels: 3 } }).composite([{ input: overlay }]));
+  }
+
+  const art = payload.style === "destaque" ? <SpotlightArt {...props} /> : <PodiumArt {...props} />;
+  return toJpeg(sharp(await renderPng(art, fonts)).flatten({ background: "#0a0a0a" }));
+}
+
+// Mesma arte pedida duas vezes (pré-carregamento + prévia, ou vários torcedores) é gerada uma vez só.
+async function getArt(payload: Payload) {
+  const key = JSON.stringify(payload);
+  const cached = artCache.get(key);
+  if (cached && Date.now() - cached.at < ART_CACHE_TTL_MS) return cached.image;
+
+  let pending = artInFlight.get(key);
+  if (!pending) {
+    pending = renderArt(payload)
+      .then((image) => {
+        remember(artCache, key, { image, at: Date.now() }, ART_CACHE_LIMIT);
+        return image;
+      })
+      .finally(() => artInFlight.delete(key));
+    artInFlight.set(key, pending);
+  }
+  return pending;
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const d = url.searchParams.get("d");
+  const d = new URL(request.url).searchParams.get("d");
   if (!d) return new Response("Parâmetro 'd' obrigatório", { status: 400 });
 
   let payload: Payload;
@@ -123,253 +261,18 @@ export async function GET(request: Request) {
     return new Response("Payload inválido", { status: 400 });
   }
 
-  const { title, subtitle } = payload;
-  const variant: 1 | 2 = payload.variant === 2 ? 2 : 1;
-  const listTop = variant === 2 ? 635 : 735;
-  const rawItems = (payload.items || [])
-    .filter((item) => item && item.name && Number.isFinite(item.value))
-    .slice(0, 5);
-
-  let frameSrc: string;
-  let fonts;
-  let items: Array<ShareItem & { resolvedPhoto?: string }>;
   try {
-    const [frame, medium, semibold, bold, photos] = await Promise.all([
-      loadFrame(variant),
-      loadFont("Oswald-500.ttf"),
-      loadFont("Oswald-600.ttf"),
-      loadFont("Oswald-700.ttf"),
-      Promise.all(rawItems.map((item) => loadPhoto(item.photo))),
-    ]);
-    frameSrc = frame;
-    fonts = [
-      { name: "Oswald", data: medium, weight: 500 as const, style: "normal" as const },
-      { name: "Oswald", data: semibold, weight: 600 as const, style: "normal" as const },
-      { name: "Oswald", data: bold, weight: 700 as const, style: "normal" as const },
-    ];
-    items = rawItems.map((item, index) => ({ ...item, resolvedPhoto: photos[index] }));
-  } catch {
+    const image = await getArt(payload);
+    return new Response(new Uint8Array(image), {
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Content-Length": String(image.length),
+        // A URL carrega todos os dados da arte: mudou um número, mudou a URL.
+        "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    });
+  } catch (error) {
+    console.error("Falha ao gerar a arte do ranking", error);
     return new Response("Falha ao montar a imagem", { status: 500 });
   }
-
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          width: "1080px",
-          height: "1920px",
-          backgroundColor: "#0a0a0a",
-          fontFamily: "Oswald",
-          color: WHITE,
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={frameSrc}
-          alt=""
-          width={1080}
-          height={1920}
-          style={{ position: "absolute", top: 0, left: 0, width: "1080px", height: "1920px", objectFit: "cover" }}
-        />
-
-        <div
-          style={{
-            position: "absolute",
-            left: "122px",
-            top: `${listTop}px`,
-            width: "836px",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-            <div
-              style={{
-                display: "flex",
-                color: RED,
-                fontSize: "30px",
-                fontWeight: 700,
-                letterSpacing: "8px",
-                textTransform: "uppercase",
-              }}
-            >
-              {subtitle}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                marginTop: "12px",
-                color: WHITE,
-                fontSize: "66px",
-                fontWeight: 700,
-                lineHeight: 1,
-                textTransform: "uppercase",
-                textShadow: "0 3px 8px rgba(0,0,0,0.95)",
-              }}
-            >
-              {title}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", marginTop: "48px", gap: "20px" }}>
-            {items.length === 0 ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: "208px",
-                  borderRadius: "24px",
-                  border: `1px solid ${GOLD}`,
-                  backgroundColor: "rgba(0,0,0,0.45)",
-                  padding: "0 40px",
-                }}
-              >
-                <div style={{ display: "flex", fontSize: "44px", fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.85)" }}>
-                  Sem dados para este filtro
-                </div>
-              </div>
-            ) : (
-              items.map((item, index) => {
-                const isLeader = index === 0;
-                const badge = isLeader ? 96 : 72;
-                const photo = item.resolvedPhoto;
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: "24px",
-                      borderRadius: "22px",
-                      padding: "0 28px",
-                      minHeight: isLeader ? "160px" : "128px",
-                      border: isLeader ? `1px solid ${GOLD}` : "1px solid rgba(212,175,55,0.35)",
-                      background: isLeader
-                        ? "linear-gradient(135deg, rgba(212,175,55,0.34), rgba(120,0,0,0.44), rgba(0,0,0,0.72))"
-                        : "rgba(0,0,0,0.52)",
-                      boxShadow: "0 18px 38px rgba(0,0,0,0.48)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        width: `${badge}px`,
-                        height: `${badge}px`,
-                        borderRadius: "16px",
-                        backgroundColor: isLeader ? GOLD : RED,
-                        color: isLeader ? "#0a0a0a" : WHITE,
-                        fontSize: isLeader ? "44px" : "30px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {`${index + 1}º`}
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        width: `${badge}px`,
-                        height: `${badge}px`,
-                        borderRadius: "9999px",
-                        border: `2px solid ${GOLD}`,
-                        backgroundColor: "#0a0a0a",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photo}
-                          alt=""
-                          width={badge}
-                          height={badge}
-                          style={{ width: `${badge}px`, height: `${badge}px`, objectFit: "cover", borderRadius: "9999px" }}
-                        />
-                      ) : (
-                        <div style={{ display: "flex", fontSize: "32px", fontWeight: 700, color: GOLD, textTransform: "uppercase" }}>
-                          {item.name.slice(0, 1)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          fontSize: isLeader ? "46px" : "36px",
-                          fontWeight: 700,
-                          color: WHITE,
-                          textTransform: "uppercase",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {item.name}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          marginTop: "6px",
-                          fontSize: "20px",
-                          textTransform: "uppercase",
-                          letterSpacing: "4px",
-                          color: "rgba(212,175,55,0.75)",
-                        }}
-                      >
-                        Bravura Futebol Clube
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          fontSize: isLeader ? "60px" : "48px",
-                          fontWeight: 700,
-                          lineHeight: 1,
-                          color: isLeader ? GOLD : RED,
-                        }}
-                      >
-                        {`${item.value}`}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          marginTop: "6px",
-                          fontSize: "20px",
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          letterSpacing: "3px",
-                          color: "rgba(255,255,255,0.65)",
-                        }}
-                      >
-                        {item.label}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </div>
-    ),
-    {
-      width: 1080,
-      height: 1920,
-      fonts,
-      headers: {
-        "Cache-Control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
-      },
-    }
-  );
 }

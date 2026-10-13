@@ -1,5 +1,7 @@
 export type Position = "Goleiro" | "Defensor" | "Meia" | "Atacante";
 
+export type PlayerEventStatKey = "goals" | "assists" | "yellowCards" | "redCards";
+
 export interface PlayerStats {
   games: number;
   goals: number;
@@ -7,6 +9,8 @@ export interface PlayerStats {
   yellowCards: number;
   redCards: number;
   minutes: number;
+  /** Lançamento manual do admin, somado aos eventos das partidas (pode ser negativo). */
+  adjust?: Partial<Record<PlayerEventStatKey, number>>;
 }
 
 export interface Player {

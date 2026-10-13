@@ -2,7 +2,7 @@ import "server-only";
 
 import { connection } from "next/server";
 import { assetUrl } from "@/lib/asset-url";
-import { getPlayersWithMatchStats, getTeamStats } from "@/lib/cms-stats";
+import { getPlayersWithMatchStats, getTeamStats, sanitizeStatAdjust } from "@/lib/cms-stats";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -61,11 +61,15 @@ function json<T>(value: T) {
 }
 
 function toPlayer(player: Player) {
+  const { adjust: _adjust, ...stats } = player.stats;
+  void _adjust;
+  const adjust = sanitizeStatAdjust(player.stats);
+
   return {
     ...player,
     position: player.position,
     preferredFoot: player.preferredFoot,
-    stats: json(player.stats),
+    stats: json(adjust ? { ...stats, adjust } : stats),
     history: json(player.history),
     monthlyGoals: json(player.monthlyGoals),
   };

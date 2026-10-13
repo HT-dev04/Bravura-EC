@@ -6,7 +6,7 @@ import Link from "next/link";
 import { StatCard } from "@/components/site/StatCard";
 import { RankingShareModal } from "@/components/site/RankingShareModal";
 import { assetUrl } from "@/lib/asset-url";
-import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
+import { getPlayerRankings, getTeamStats, PLAYER_EVENT_STAT_KEYS } from "@/lib/cms-stats";
 import { getValidImageSrc } from "@/lib/image-utils";
 import { formatDate } from "@/lib/utils";
 import type { Match, Player, PlayerStats } from "@/types";
@@ -84,7 +84,8 @@ function filterMatches(matches: Match[], type: FilterType, value: string) {
   });
 }
 
-function buildFilteredPlayers(players: Player[], matches: Match[]) {
+// Os ajustes manuais do admin não têm data, então só entram no recorte geral (sem filtro).
+function buildFilteredPlayers(players: Player[], matches: Match[], includeManualAdjust: boolean) {
   const statsByPlayer = new Map<string, PlayerStats>();
   const nameToId = new Map<string, string>();
   const virtualPlayers = new Map<string, Player>();
@@ -148,6 +149,16 @@ function buildFilteredPlayers(players: Player[], matches: Match[]) {
     }
   }
 
+  if (includeManualAdjust) {
+    for (const player of players) {
+      const stats = statsByPlayer.get(player.id);
+      if (!stats) continue;
+      for (const key of PLAYER_EVENT_STAT_KEYS) {
+        stats[key] = Math.max(0, stats[key] + (player.stats.adjust?.[key] || 0));
+      }
+    }
+  }
+
   return [
     ...players.map((player) => ({ ...player, stats: statsByPlayer.get(player.id) || { ...emptyPlayerStats } })),
     ...Array.from(virtualPlayers.values()).map((player) => ({ ...player, stats: statsByPlayer.get(player.id) || { ...emptyPlayerStats } })),
@@ -165,7 +176,8 @@ export function StatsExplorer({ players, matches, shareUrl, siteLabel }: { playe
   const valueOptions = filterType === "mes" ? months : filterType === "temporada" ? seasons : filterType === "campeonato" ? competitions : [];
   const filteredMatches = useMemo(() => filterMatches(matches, filterType, filterValue), [matches, filterType, filterValue]);
   const teamStats = useMemo(() => getTeamStats(filteredMatches), [filteredMatches]);
-  const filteredPlayers = useMemo(() => buildFilteredPlayers(players, filteredMatches), [players, filteredMatches]);
+  const isUnfiltered = filterType === "total" || !filterValue;
+  const filteredPlayers = useMemo(() => buildFilteredPlayers(players, filteredMatches, isUnfiltered), [players, filteredMatches, isUnfiltered]);
   const { topScorers, topAssists, topGames, topGoalParticipations } = getPlayerRankings(filteredPlayers);
   const topYellowCards = [...filteredPlayers].sort((a, b) => b.stats.yellowCards - a.stats.yellowCards).slice(0, 5);
   const topRedCards = [...filteredPlayers].sort((a, b) => b.stats.redCards - a.stats.redCards).slice(0, 5);

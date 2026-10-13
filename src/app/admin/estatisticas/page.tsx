@@ -5,8 +5,8 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { saveAdminCollection } from "@/lib/admin-client";
-import { getTeamStats } from "@/lib/cms-stats";
-import type { Match, Player, TeamStatsSummary } from "@/types";
+import { getPlayerEventStats, getTeamStats, setPlayerStatTotal } from "@/lib/cms-stats";
+import type { Match, Player, PlayerEventStatKey, TeamStatsSummary } from "@/types";
 
 type Tab = "geral" | "jogadores";
 type StatsMode = "automatico" | "manual";
@@ -107,12 +107,34 @@ export default function AdminEstatisticasPage() {
   async function savePlayers(nextPlayers = players) {
     setSavingPlayers(true);
     setPlayers(nextPlayers);
-    await saveAdminCollection("players", nextPlayers);
-    setSavingPlayers(false);
+    try {
+      const saved = await saveAdminCollection("players", nextPlayers);
+      if (saved?.players) setPlayers(saved.players);
+      if (saved?.matches) setMatches(saved.matches);
+    } finally {
+      setSavingPlayers(false);
+    }
   }
 
   function updatePlayer(playerId: string, next: Player) {
     setPlayers(players.map((player) => (player.id === playerId ? next : player)));
+  }
+
+  // Gols, assistências e cartões = eventos das partidas + ajuste manual. Editar o total grava só a diferença.
+  const eventStats = getPlayerEventStats(players, matches);
+
+  function fromMatches(player: Player, key: PlayerEventStatKey) {
+    return eventStats.get(player.id)?.[key] ?? 0;
+  }
+
+  function updateEventStat(player: Player, key: PlayerEventStatKey, total: number) {
+    updatePlayer(player.id, { ...player, stats: setPlayerStatTotal(player.stats, key, total, fromMatches(player, key)) });
+  }
+
+  function adjustHint(player: Player, key: PlayerEventStatKey) {
+    const adjust = player.stats.adjust?.[key] || 0;
+    if (!adjust) return undefined;
+    return `${fromMatches(player, key)} nas partidas ${adjust > 0 ? "+" : "−"} ${Math.abs(adjust)} manual`;
   }
 
   return (
@@ -221,9 +243,11 @@ export default function AdminEstatisticasPage() {
           <div className="bg-brand-black-2 border border-brand-border rounded-sm p-4 flex flex-col md:flex-row gap-4 md:items-end md:justify-between">
             <div>
               <h2 className="font-display uppercase text-lg text-brand-gold">Estatísticas dos jogadores</h2>
-              <p className="text-sm text-brand-gray">Altere jogos, gols, assistências, cartões, minutos e gols por mês.</p>
+              <p className="text-sm text-brand-gray">
+                Gols, assistências e cartões já vêm somados das partidas. Mudou um número aqui? A diferença fica salva como ajuste manual, vale no perfil, nos rankings e nas artes, e os próximos jogos continuam somando por cima.
+              </p>
             </div>
-            <Button variant="primary" onClick={() => savePlayers()} disabled={savingPlayers}>{savingPlayers ? "Salvando..." : "Salvar jogadores"}</Button>
+            <Button variant="primary" className="shrink-0 whitespace-nowrap" onClick={() => savePlayers()} disabled={savingPlayers}>{savingPlayers ? "Salvando..." : "Salvar jogadores"}</Button>
           </div>
 
           <div className="md:hidden border border-brand-border rounded-sm divide-y divide-brand-border">
@@ -234,10 +258,10 @@ export default function AdminEstatisticasPage() {
                 <p className="font-semibold text-sm">{player.nickname || player.name}</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   <PlayerStatField label="Jogos" value={player.stats.games} onChange={(games) => updatePlayer(player.id, { ...player, stats: { ...player.stats, games } })} />
-                  <PlayerStatField label="Gols" value={player.stats.goals} onChange={(goals) => updatePlayer(player.id, { ...player, stats: { ...player.stats, goals } })} />
-                  <PlayerStatField label="Assistências" value={player.stats.assists} onChange={(assists) => updatePlayer(player.id, { ...player, stats: { ...player.stats, assists } })} />
-                  <PlayerStatField label="Amarelos" value={player.stats.yellowCards} onChange={(yellowCards) => updatePlayer(player.id, { ...player, stats: { ...player.stats, yellowCards } })} />
-                  <PlayerStatField label="Vermelhos" value={player.stats.redCards} onChange={(redCards) => updatePlayer(player.id, { ...player, stats: { ...player.stats, redCards } })} />
+                  <PlayerStatField label="Gols" value={player.stats.goals} hint={adjustHint(player, "goals")} onChange={(value) => updateEventStat(player, "goals", value)} />
+                  <PlayerStatField label="Assistências" value={player.stats.assists} hint={adjustHint(player, "assists")} onChange={(value) => updateEventStat(player, "assists", value)} />
+                  <PlayerStatField label="Amarelos" value={player.stats.yellowCards} hint={adjustHint(player, "yellowCards")} onChange={(value) => updateEventStat(player, "yellowCards", value)} />
+                  <PlayerStatField label="Vermelhos" value={player.stats.redCards} hint={adjustHint(player, "redCards")} onChange={(value) => updateEventStat(player, "redCards", value)} />
                   <PlayerStatField label="Minutos" value={player.stats.minutes} onChange={(minutes) => updatePlayer(player.id, { ...player, stats: { ...player.stats, minutes } })} />
                 </div>
               </div>
@@ -262,10 +286,10 @@ export default function AdminEstatisticasPage() {
                   <tr key={player.id} className="border-t border-brand-border">
                     <td className="px-4 py-3 font-semibold whitespace-nowrap">{player.nickname || player.name}</td>
                     <td className="px-4 py-3"><InlineNumber value={player.stats.games} onChange={(games) => updatePlayer(player.id, { ...player, stats: { ...player.stats, games } })} /></td>
-                    <td className="px-4 py-3"><InlineNumber value={player.stats.goals} onChange={(goals) => updatePlayer(player.id, { ...player, stats: { ...player.stats, goals } })} /></td>
-                    <td className="px-4 py-3"><InlineNumber value={player.stats.assists} onChange={(assists) => updatePlayer(player.id, { ...player, stats: { ...player.stats, assists } })} /></td>
-                    <td className="px-4 py-3"><InlineNumber value={player.stats.yellowCards} onChange={(yellowCards) => updatePlayer(player.id, { ...player, stats: { ...player.stats, yellowCards } })} /></td>
-                    <td className="px-4 py-3"><InlineNumber value={player.stats.redCards} onChange={(redCards) => updatePlayer(player.id, { ...player, stats: { ...player.stats, redCards } })} /></td>
+                    <td className="px-4 py-3"><InlineNumber value={player.stats.goals} hint={adjustHint(player, "goals")} onChange={(value) => updateEventStat(player, "goals", value)} /></td>
+                    <td className="px-4 py-3"><InlineNumber value={player.stats.assists} hint={adjustHint(player, "assists")} onChange={(value) => updateEventStat(player, "assists", value)} /></td>
+                    <td className="px-4 py-3"><InlineNumber value={player.stats.yellowCards} hint={adjustHint(player, "yellowCards")} onChange={(value) => updateEventStat(player, "yellowCards", value)} /></td>
+                    <td className="px-4 py-3"><InlineNumber value={player.stats.redCards} hint={adjustHint(player, "redCards")} onChange={(value) => updateEventStat(player, "redCards", value)} /></td>
                     <td className="px-4 py-3"><InlineNumber value={player.stats.minutes} onChange={(minutes) => updatePlayer(player.id, { ...player, stats: { ...player.stats, minutes } })} /></td>
                   </tr>
                 ))}
@@ -296,12 +320,17 @@ function NumberField({ label, value, disabled, onChange }: { label: string; valu
   return <div><Label>{label}</Label><Input className="mt-1" type="number" min="0" placeholder="0" value={value || ""} disabled={disabled} onChange={(e) => onChange(e.target.value === "" ? 0 : +e.target.value)} /></div>;
 }
 
-function InlineNumber({ value, onChange }: { value: number; onChange: (value: number) => void }) {
-  return <Input className="w-24" type="number" min="0" placeholder="0" value={value || ""} onChange={(e) => onChange(e.target.value === "" ? 0 : +e.target.value)} />;
+function InlineNumber({ value, hint, onChange }: { value: number; hint?: string; onChange: (value: number) => void }) {
+  return (
+    <>
+      <Input className="w-24" type="number" min="0" placeholder="0" value={value || ""} onChange={(e) => onChange(e.target.value === "" ? 0 : +e.target.value)} />
+      {hint && <p className="mt-1 whitespace-nowrap text-[10px] text-brand-gold">{hint}</p>}
+    </>
+  );
 }
 
-function PlayerStatField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <div><p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">{label}</p><InlineNumber value={value} onChange={onChange} /></div>;
+function PlayerStatField({ label, value, hint, onChange }: { label: string; value: number; hint?: string; onChange: (value: number) => void }) {
+  return <div><p className="text-[10px] uppercase tracking-wider text-brand-gray mb-1">{label}</p><InlineNumber value={value} hint={hint} onChange={onChange} /></div>;
 }
 
 function EditableGoalsByMonth({ teamStats, setTeamStats }: { teamStats: TeamStatsSummary; setTeamStats: (value: TeamStatsSummary) => void }) {

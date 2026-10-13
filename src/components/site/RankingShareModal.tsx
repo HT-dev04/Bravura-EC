@@ -1,16 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, Download, Share2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
+import { encodeRankingPayload, RANKING_ART_STYLES, type RankingArtStyle, type RankingShareItem } from "@/lib/ranking-share";
 
-export type RankingShareItem = {
-  id: string;
-  name: string;
-  photo?: string;
-  value: number;
-  label: string;
-};
+export type { RankingShareItem };
 
 type RankingShareModalProps = {
   title: string;
@@ -20,102 +15,120 @@ type RankingShareModalProps = {
   siteLabel: string;
 };
 
-// Codifica o payload em base64url (UTF-8 safe) para a rota /api/ranking-image.
-function encodePayload(payload: unknown) {
-  const json = JSON.stringify(payload);
-  const bytes = new TextEncoder().encode(json);
-  let binary = "";
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
+// Arte já baixada: o arquivo vai direto para o compartilhamento e a URL local alimenta a prévia.
+type Art = { file: File; url: string };
 
-export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingShareModalProps) {
+export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel }: RankingShareModalProps) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const [variant, setVariant] = useState<1 | 2>(1);
+  const [style, setStyle] = useState<RankingArtStyle | null>(null);
+  // Resultado por URL da arte: a URL muda junto com estilo, filtro e números, então nunca mostra arte velha.
+  const [arts, setArts] = useState<Record<string, Art | "error">>({});
+  const requested = useRef(new Set<string>());
+  const objectUrls = useRef<string[]>([]);
+
+  useEffect(() => {
+    const urls = objectUrls.current;
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
   // A arte é gerada 100% no servidor (next/og), então funciona igual em desktop e celular.
-  const imageUrl = useMemo(() => {
-    const cleanItems = items
-      .filter((item) => item.name && Number.isFinite(item.value))
-      .slice(0, 5)
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        photo: item.photo,
-        value: item.value,
-        label: item.label,
-      }));
-    const d = encodePayload({ title, subtitle, variant, items: cleanItems });
-    const retry = attempt > 0 ? `&r=${attempt}` : "";
-    return `/api/ranking-image?d=${d}${retry}`;
-  }, [title, subtitle, variant, items, attempt]);
+  const artUrl = useCallback(
+    (artStyle: RankingArtStyle) => {
+      const cleanItems = items
+        .filter((item) => item.name && Number.isFinite(item.value))
+        .slice(0, 5)
+        .map((item) => ({ id: item.id, name: item.name, photo: item.photo, value: item.value, label: item.label }));
+      return `/api/ranking-image?d=${encodeRankingPayload({ title, subtitle, style: artStyle, site: siteLabel, items: cleanItems })}`;
+    },
+    [title, subtitle, items, siteLabel]
+  );
+
+  const loadArt = useCallback(
+    (artStyle: RankingArtStyle) => {
+      const url = artUrl(artStyle);
+      if (requested.current.has(url)) return;
+      requested.current.add(url);
+
+      fetch(url)
+        .then(async (response) => {
+          if (!response.ok) throw new Error("Imagem indisponível");
+          const file = new File([await response.blob()], `${slugify(title)}-bravura.jpg`, { type: "image/jpeg" });
+          const objectUrl = URL.createObjectURL(file);
+          objectUrls.current.push(objectUrl);
+          setArts((current) => ({ ...current, [url]: { file, url: objectUrl } }));
+        })
+        .catch(() => {
+          requested.current.delete(url);
+          setArts((current) => ({ ...current, [url]: "error" }));
+        });
+    },
+    [artUrl, title]
+  );
+
+  // Começa a gerar assim que a pessoa encosta no botão: quando o modal abre a arte já está a caminho.
+  function prepare() {
+    const chosen = style ?? RANKING_ART_STYLES[Math.floor(Math.random() * RANKING_ART_STYLES.length)].id;
+    if (!style) setStyle(chosen);
+    loadArt(chosen);
+  }
 
   function openShareModal() {
     setMessage(null);
-    setLoaded(false);
-    setFailed(false);
-    setAttempt(0);
-    setVariant(Math.random() < 0.5 ? 1 : 2);
+    prepare();
     setOpen(true);
   }
 
+  function selectStyle(next: RankingArtStyle) {
+    setMessage(null);
+    setStyle(next);
+    loadArt(next);
+  }
+
+  const currentUrl = style ? artUrl(style) : null;
+  const current = currentUrl ? arts[currentUrl] : undefined;
+  const art = current && current !== "error" ? current : null;
+  const failed = current === "error";
+
   function retryGeneration() {
-    setLoaded(false);
-    setFailed(false);
+    if (!style || !currentUrl) return;
     setMessage(null);
-    setAttempt((value) => value + 1);
+    setArts((previous) => {
+      const next = { ...previous };
+      delete next[currentUrl];
+      return next;
+    });
+    loadArt(style);
   }
 
-  async function createImageFile() {
-    const response = await fetch(imageUrl, { cache: "no-store" });
-    if (!response.ok) throw new Error("Imagem indisponível");
-    const blob = await response.blob();
-    return new File([blob], `${slugify(title)}-bravura.png`, { type: "image/png" });
+  function handleDownload() {
+    if (!art) return;
+    const link = document.createElement("a");
+    link.href = art.url;
+    link.download = art.file.name;
+    link.click();
+    setMessage("Imagem baixada.");
   }
 
-  async function handleDownload() {
-    setMessage(null);
-    setBusy(true);
-    try {
-      const file = await createImageFile();
-      const objectUrl = URL.createObjectURL(file);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = file.name;
-      link.click();
-      URL.revokeObjectURL(objectUrl);
-      setMessage("Imagem baixada em PNG.");
-    } catch {
-      setMessage("Não foi possível baixar a imagem.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  // A imagem já está na memória: o compartilhamento abre no mesmo toque, sem esperar o servidor
+  // (no iPhone, esperar aqui faz o navegador bloquear a janela de compartilhar).
   async function handleShare() {
+    if (!art) return;
     setMessage(null);
-    setBusy(true);
-    try {
-      // O link vai embutido no texto para não se perder em apps que ignoram o campo `url`.
-      const text = `🏆 ${title} — ${subtitle}\nConfira o ranking completo no site oficial do Bravura:\n${shareUrl}`;
-      const file = await createImageFile();
+    // O link vai embutido no texto para não se perder em apps que ignoram o campo `url`.
+    const text = `🏆 ${title} — ${subtitle}\nConfira o ranking completo no site oficial do Bravura:\n${shareUrl}`;
+    const files = [art.file];
 
+    try {
       // 1ª opção: imagem + mensagem + link juntos.
-      if (navigator.canShare?.({ files: [file], text, url: shareUrl })) {
-        await navigator.share({ title, text, url: shareUrl, files: [file] });
+      if (navigator.canShare?.({ files, text, url: shareUrl })) {
+        await navigator.share({ title, text, url: shareUrl, files });
         return;
       }
 
       // 2ª opção: imagem + mensagem (link já está no texto).
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title, text, files: [file] });
+      if (navigator.canShare?.({ files })) {
+        await navigator.share({ title, text, files });
         return;
       }
 
@@ -131,8 +144,6 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setMessage("Não foi possível compartilhar agora.");
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -151,6 +162,9 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
       <button
         type="button"
         onClick={openShareModal}
+        onPointerEnter={prepare}
+        onTouchStart={prepare}
+        onFocus={prepare}
         className="inline-flex items-center gap-2 rounded-sm border border-brand-gold/50 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold hover:text-brand-black"
       >
         <Share2 className="h-4 w-4" />
@@ -160,19 +174,12 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
       <Dialog open={open} onClose={() => setOpen(false)} title="Compartilhar ranking" className="max-w-4xl">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="overflow-hidden rounded-sm border border-brand-border bg-brand-black p-3">
-            <div className="relative mx-auto aspect-[9/16] max-h-[70vh] max-w-sm overflow-hidden rounded-sm bg-brand-black">
-              {open && !failed && (
+            <div className="relative mx-auto aspect-[9/16] max-h-[44vh] max-w-sm overflow-hidden rounded-sm bg-brand-black lg:max-h-[70vh]">
+              {art && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={imageUrl}
-                  src={imageUrl}
-                  alt="Prévia do ranking Bravura"
-                  onLoad={() => setLoaded(true)}
-                  onError={() => setFailed(true)}
-                  className={`h-full w-full object-contain transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
-                />
+                <img key={art.url} src={art.url} alt="Prévia do ranking Bravura" className="h-full w-full object-contain" />
               )}
-              {!loaded && !failed && (
+              {!art && !failed && (
                 <div className="absolute inset-0 flex items-center justify-center text-center text-xs font-semibold uppercase tracking-wider text-brand-gray">
                   Gerando arte…
                 </div>
@@ -195,26 +202,44 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm text-brand-gray">
-              Arte vertical em 1080x1920 pronta para Story. Baixe ou compartilhe direto pelo celular.
-            </p>
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={busy || !loaded}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-brand-red px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Download className="h-4 w-4" />
-              {busy ? "Gerando…" : "Baixar imagem"}
-            </button>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-gray">Estilo da arte</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {RANKING_ART_STYLES.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={style === option.id}
+                    onClick={() => selectStyle(option.id)}
+                    onPointerEnter={() => loadArt(option.id)}
+                    className={`rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                      style === option.id
+                        ? "border-brand-gold bg-brand-gold/15 text-brand-gold"
+                        : "border-brand-border text-brand-white hover:border-brand-gold/60"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button
               type="button"
               onClick={handleShare}
-              disabled={busy || !loaded}
+              disabled={!art}
               className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-brand-gold px-4 py-3 text-sm font-semibold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-gold-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Share2 className="h-4 w-4" />
               Compartilhar
+            </button>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={!art}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-brand-red px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" />
+              Baixar imagem
             </button>
             <button
               type="button"
@@ -225,6 +250,9 @@ export function RankingShareModal({ title, subtitle, items, shareUrl }: RankingS
               Copiar link
             </button>
             {message && <p role="status" className="text-sm font-semibold text-brand-gold">{message}</p>}
+            <p className="text-sm text-brand-gray">
+              Arte vertical em 1080x1920 pronta para Story. Baixe ou compartilhe direto pelo celular.
+            </p>
           </div>
         </div>
       </Dialog>
