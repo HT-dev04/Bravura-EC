@@ -215,6 +215,61 @@ export interface TeamStatsSummary {
   winRateByCompetition: { competition: string; rate: number }[];
 }
 
+export type ChampionshipStatus = "planejado" | "em_andamento" | "encerrado";
+
+export type ChampionshipStatKey = PlayerEventStatKey | "games";
+
+/** Inscrito só no campeonato: número e estatísticas não afetam o elenco dos amistosos. */
+export interface ChampionshipPlayer {
+  id: string;
+  name: string;
+  nickname: string;
+  number: number;
+  position: Position;
+  photo: string;
+  /** Jogador do elenco de onde o cadastro foi importado (só referência). */
+  sourcePlayerId?: string;
+  /** Lançamento manual do admin, somado ao que as partidas do campeonato contam (pode ser negativo). */
+  adjust?: Partial<Record<ChampionshipStatKey, number>>;
+}
+
+export interface ChampionshipMatch {
+  id: string;
+  opponent: string;
+  opponentLogo: string;
+  date: string;
+  location: string;
+  /** Ex.: Fase de grupos, Quartas de final, Final. */
+  phase: string;
+  status: MatchStatus;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  penaltiesHome: number | null;
+  penaltiesAway: number | null;
+  /** playerId aponta para ChampionshipPlayer.id. */
+  events: MatchEvent[];
+  /** Jogadores do campeonato que entraram em campo. */
+  lineup: string[];
+  highlightPlayerId?: string;
+}
+
+export interface Championship {
+  id: string;
+  slug: string;
+  name: string;
+  season: string;
+  logo: string;
+  cover: string;
+  description: string;
+  status: ChampionshipStatus;
+  startDate: string;
+  endDate: string;
+  /** Ex.: Campeão, Vice, 3º lugar. */
+  finalPosition: string;
+  players: ChampionshipPlayer[];
+  matches: ChampionshipMatch[];
+}
+
 export interface CmsData {
   players: Player[];
   matches: Match[];

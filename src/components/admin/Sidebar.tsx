@@ -15,6 +15,7 @@ import {
   DollarSign,
   ShoppingBag,
   Receipt,
+  Trophy,
   LogOut,
   Menu,
   X,
@@ -27,6 +28,7 @@ const links = [
   { href: "/admin/jogadores", label: "Jogadores", icon: Users },
   { href: "/admin/estatisticas", label: "Estatísticas", icon: BarChart3 },
   { href: "/admin/partidas", label: "Partidas", icon: CalendarDays },
+  { href: "/admin/campeonatos", label: "Campeonatos", icon: Trophy },
   { href: "/admin/noticias", label: "Notícias", icon: Newspaper },
   { href: "/admin/galeria", label: "Galeria", icon: ImageIcon },
   { href: "/admin/patrocinadores", label: "Patrocinadores", icon: Handshake },
@@ -34,6 +36,10 @@ const links = [
   { href: "/admin/produtos", label: "Produtos", icon: ShoppingBag },
   { href: "/admin/pedidos", label: "Pedidos", icon: Receipt },
 ];
+
+function isActive(pathname: string, href: string) {
+  return href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -65,7 +71,7 @@ export function Sidebar() {
       <nav className="flex-1 p-3 space-y-1 text-sm overflow-y-auto">
         {links.map((l) => {
           const Icon = l.icon;
-          const active = pathname === l.href;
+          const active = isActive(pathname, l.href);
           return (
             <Link
               key={l.href}
@@ -169,7 +175,7 @@ export function Sidebar() {
         <nav className="flex-1 p-3 space-y-1 text-sm overflow-y-auto">
           {links.map((l) => {
             const Icon = l.icon;
-            const active = pathname === l.href;
+            const active = isActive(pathname, l.href);
             return (
               <Link
                 key={l.href}

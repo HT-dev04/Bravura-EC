@@ -31,6 +31,7 @@ export function Footer() {
             <li><Link href="/o-clube" className="text-brand-white/80 hover:text-white">O Clube</Link></li>
             <li><Link href="/elenco" className="text-brand-white/80 hover:text-white">Elenco</Link></li>
             <li><Link href="/jogos" className="text-brand-white/80 hover:text-white">Jogos</Link></li>
+            <li><Link href="/campeonatos" className="text-brand-white/80 hover:text-white">Campeonatos</Link></li>
             <li><Link href="/estatisticas" className="text-brand-white/80 hover:text-white">Estatísticas</Link></li>
             <li><Link href="/galeria" className="text-brand-white/80 hover:text-white">Galeria</Link></li>
           </ul>

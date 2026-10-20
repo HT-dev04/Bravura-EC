@@ -182,3 +182,23 @@ model SponsorshipEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+/// Campeonatos ficam isolados: elenco, números e partidas vivem só aqui dentro
+/// e não entram nas estatísticas dos amistosos (Player/Match/TeamStats).
+model Championship {
+  id            String   @id
+  slug          String   @unique
+  name          String
+  season        String
+  logo          String   @default("")
+  cover         String   @default("")
+  description   String   @default("")
+  status        String
+  startDate     String   @default("")
+  endDate       String   @default("")
+  finalPosition String   @default("")
+  players       Json     @default("[]")
+  matches       Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

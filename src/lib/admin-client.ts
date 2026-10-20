@@ -1,4 +1,4 @@
-import type { CmsData } from "@/types";
+import type { Championship, CmsData } from "@/types";
 
 const TEMPORARY_SAVE_ERROR_CODES = ["DATABASE_TEMPORARILY_UNAVAILABLE", "EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "P2028"];
 
@@ -103,6 +103,48 @@ export async function saveAdminCollection<K extends keyof CmsData>(collection: K
     response: lastPayload,
   });
   throw new Error(message);
+}
+
+type ChampionshipResponse = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  championship?: Championship;
+  championships?: Championship[];
+};
+
+async function championshipRequest(method: "GET" | "PUT" | "DELETE", body?: unknown, id?: string) {
+  const url = id ? `/api/admin/championships?id=${encodeURIComponent(id)}` : "/api/admin/championships";
+  const res = await fetch(url, {
+    method,
+    cache: "no-store",
+    credentials: "same-origin",
+    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
+  });
+  let payload: ChampionshipResponse | null = null;
+  try {
+    payload = await res.json();
+  } catch {
+    payload = null;
+  }
+  if (!res.ok || payload?.success === false) {
+    throw new Error(payload?.message || payload?.error || res.statusText || "Erro ao processar campeonato");
+  }
+  return payload || {};
+}
+
+export async function fetchAdminChampionships() {
+  return (await championshipRequest("GET")).championships || [];
+}
+
+export async function saveAdminChampionship(championship: Championship) {
+  const { championship: saved } = await championshipRequest("PUT", { championship });
+  if (!saved) throw new Error("Resposta inválida ao salvar campeonato");
+  return saved;
+}
+
+export async function deleteAdminChampionship(id: string) {
+  return (await championshipRequest("DELETE", undefined, id)).championships || [];
 }
 
 export async function uploadAdminFile(file: File) {

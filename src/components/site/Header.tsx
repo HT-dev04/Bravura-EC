@@ -13,6 +13,7 @@ const navLinks = [
   { href: "/o-clube", label: "O Clube" },
   { href: "/elenco", label: "Elenco" },
   { href: "/jogos", label: "Jogos" },
+  { href: "/campeonatos", label: "Campeonatos" },
   { href: "/estatisticas", label: "Estatísticas" },
   { href: "/galeria", label: "Galeria" },
   { href: "/noticias", label: "Notícias" },
@@ -37,17 +38,17 @@ export function Header() {
             height={36}
             className="h-9 w-9 object-contain"
           />
-          <span className="hidden truncate font-display uppercase text-xl tracking-wider sm:inline">
+          <span className="hidden truncate font-display uppercase text-xl tracking-wider sm:inline xl:hidden 2xl:inline">
             Bravura <span className="text-brand-red">EC</span>
           </span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden xl:flex items-center gap-1">
           {navLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="px-3 py-2 text-xs uppercase tracking-wider font-semibold text-brand-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors"
+              className="whitespace-nowrap px-3 py-2 text-xs uppercase tracking-wider font-semibold text-brand-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors"
             >
               {l.label}
             </Link>
@@ -85,7 +86,7 @@ export function Header() {
           </button>
           <button
             onClick={() => setOpen(!open)}
-            className="lg:hidden p-2 text-brand-white"
+            className="xl:hidden p-2 text-brand-white"
             aria-label="Menu"
           >
             {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -95,8 +96,8 @@ export function Header() {
 
       <div
         className={cn(
-          "lg:hidden overflow-hidden transition-[max-height] duration-300 border-t border-brand-border",
-          open ? "max-h-[500px]" : "max-h-0"
+          "xl:hidden overflow-hidden transition-[max-height] duration-300 border-t border-brand-border",
+          open ? "max-h-[560px]" : "max-h-0"
         )}
       >
         <nav className="container-x py-4 flex flex-col gap-1">

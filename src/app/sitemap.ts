@@ -1,16 +1,18 @@
 import type { MetadataRoute } from "next";
+import { listChampionships } from "@/lib/championship-store";
 import { getCmsData } from "@/lib/cms-store";
 import { siteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { players, news, matches, products } = await getCmsData();
+  const [{ players, news, matches, products }, championships] = await Promise.all([getCmsData(), listChampionships()]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: siteUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
     { url: `${siteUrl}/elenco`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
     { url: `${siteUrl}/jogos`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${siteUrl}/campeonatos`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${siteUrl}/noticias`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${siteUrl}/galeria`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
     { url: `${siteUrl}/o-clube`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
@@ -48,5 +50,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...playerRoutes, ...newsRoutes, ...matchRoutes, ...productRoutes];
+  const championshipRoutes: MetadataRoute.Sitemap = championships.map((c) => ({
+    url: `${siteUrl}/campeonatos/${c.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...playerRoutes, ...newsRoutes, ...matchRoutes, ...championshipRoutes, ...productRoutes];
 }

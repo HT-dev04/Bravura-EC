@@ -28,6 +28,7 @@ const requiredDelegates = [
   "revenueEntry",
   "expenseEntry",
   "sponsorshipEntry",
+  "championship",
 ] as const;
 
 function hasRequiredDelegates(client: PrismaClient | undefined): client is PrismaClient {
