@@ -6,6 +6,7 @@ import { Calendar, Sparkles, Trophy } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
 import { ChampionshipLogo } from "@/components/site/ChampionshipCard";
+import { GroupStandingsTable, TeamCrest } from "@/components/site/ChampionshipStandings";
 import { Badge } from "@/components/ui/badge";
 import { bravuraLogo } from "@/lib/asset-url";
 import {
@@ -14,6 +15,7 @@ import {
   getChampionshipPlayerStats,
   getChampionshipRanking,
   getChampionshipSummary,
+  getTeamGroup,
   type ChampionshipPlayerStats,
 } from "@/lib/championship-stats";
 import { getChampionshipBySlug } from "@/lib/championship-store";
@@ -59,6 +61,13 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
   const matches = [...championship.matches].sort((a, b) => +new Date(b.date) - +new Date(a.date));
   const squad = [...championship.players].sort((a, b) => (a.number || 999) - (b.number || 999));
   const cover = getValidImageSrc(championship.cover);
+  const sections = [
+    { id: "campanha", label: "Campanha" },
+    ...(championship.groups.length > 0 ? [{ id: "classificacao", label: "Classificação" }] : []),
+    ...(championship.teams.length > 0 ? [{ id: "times", label: "Times" }] : []),
+    { id: "partidas", label: "Partidas" },
+    { id: "elenco", label: "Elenco" },
+  ];
   // Datas só com dia (YYYY-MM-DD): meio-dia evita voltar um dia no fuso do Brasil.
   const period = [championship.startDate, championship.endDate]
     .filter(Boolean)
@@ -97,7 +106,21 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
         </div>
       </section>
 
-      <section className="container-x py-10">
+      <nav className="sticky top-16 z-30 border-b border-brand-border bg-brand-black/95 backdrop-blur">
+        <div className="container-x flex gap-1 overflow-x-auto py-2">
+          {sections.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              className="shrink-0 rounded-sm px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-brand-white/80 hover:bg-white/5 hover:text-white"
+            >
+              {section.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      <section id="campanha" className="container-x scroll-mt-32 py-10">
         <h2 className="mb-5 font-display text-2xl uppercase md:text-3xl">Campanha</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           <StatCard label="Jogos" value={summary.games} />
@@ -110,7 +133,47 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
         </div>
       </section>
 
-      <section className="container-x grid gap-10 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+      {championship.groups.length > 0 && (
+        <section id="classificacao" className="container-x scroll-mt-32 py-10">
+          <h2 className="mb-5 font-display text-2xl uppercase md:text-3xl">Classificação</h2>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {championship.groups.map((group) => (
+              <GroupStandingsTable key={group.id} championship={championship} group={group} />
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] uppercase tracking-wider text-brand-gray">
+            P pontos · J jogos · V vitórias · E empates · D derrotas · SG saldo de gols
+          </p>
+        </section>
+      )}
+
+      {championship.teams.length > 0 && (
+        <section id="times" className="container-x scroll-mt-32 py-10">
+          <h2 className="mb-5 font-display text-2xl uppercase md:text-3xl">Times</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {championship.teams.map((team) => {
+              const group = getTeamGroup(championship, team.id);
+              return (
+                <div
+                  key={team.id}
+                  className={cn(
+                    "flex flex-col items-center gap-3 rounded-sm border bg-brand-black-2 p-5 text-center",
+                    team.isBravura ? "border-brand-red/70" : "border-brand-border"
+                  )}
+                >
+                  <TeamCrest team={team} size={88} />
+                  <div className="min-w-0">
+                    <p className="break-words font-display text-lg uppercase leading-tight">{team.name}</p>
+                    <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-gold">{group?.name || "Confirmado"}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <section id="partidas" className="container-x grid scroll-mt-32 gap-10 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div className="min-w-0">
           <h2 className="mb-5 font-display text-2xl uppercase md:text-3xl">Partidas</h2>
           {matches.length === 0 ? (
@@ -130,7 +193,7 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
         </div>
       </section>
 
-      <section className="container-x py-10">
+      <section id="elenco" className="container-x scroll-mt-32 py-10">
         <h2 className="mb-1 font-display text-2xl uppercase md:text-3xl">Elenco do campeonato</h2>
         <p className="mb-5 text-sm text-brand-gray">Números e estatísticas válidos só para esta competição.</p>
         {squad.length === 0 ? (
@@ -155,7 +218,8 @@ function ChampionshipMatchCard({ match, championship }: { match: ChampionshipMat
   const played = match.status === "encerrada" && match.scoreHome !== null && match.scoreAway !== null;
   const result = played ? championshipMatchResult(match) : null;
   const style = result ? RESULT_STYLE[result] : null;
-  const opponentLogo = getValidImageSrc(match.opponentLogo);
+  const opponentTeam = championship.teams.find((team) => team.id === match.opponentTeamId);
+  const opponentLogo = getValidImageSrc(opponentTeam?.logo || match.opponentLogo);
   const goals = match.events.filter((event) => event.team === "bravura" && event.type === "gol" && event.playerName.trim());
   const highlight = championship.players.find((player) => player.id === match.highlightPlayerId);
   const hasPenalties = match.penaltiesHome !== null && match.penaltiesAway !== null;

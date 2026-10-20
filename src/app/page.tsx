@@ -7,10 +7,12 @@ import { StatCard } from "@/components/site/StatCard";
 import { MatchCard } from "@/components/site/MatchCard";
 import { NewsCard } from "@/components/site/NewsCard";
 import { SponsorGrid } from "@/components/site/SponsorGrid";
+import { ChampionshipCard } from "@/components/site/ChampionshipCard";
 import { RankingShareModal } from "@/components/site/RankingShareModal";
 import { Button } from "@/components/ui/button";
 import { clubInfo } from "@/data/club";
 import { getCmsData } from "@/lib/cms-store";
+import { listChampionships } from "@/lib/championship-store";
 import { bravuraLogo } from "@/lib/asset-url";
 import { getInitials, getValidImageSrc } from "@/lib/image-utils";
 import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
@@ -29,7 +31,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const { matches, news, gallery, players, sponsors } = await getCmsData();
+  const [{ matches, news, gallery, players, sponsors }, championships] = await Promise.all([getCmsData(), listChampionships()]);
+  // Em andamento primeiro, depois os próximos e por último os encerrados.
+  const statusOrder = { em_andamento: 0, planejado: 1, encerrado: 2 } as const;
+  const homeChampionships = [...championships].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]).slice(0, 3);
   const next = matches
     .filter((m) => m.status === "agendada")
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))[0];
@@ -119,6 +124,21 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {homeChampionships.length > 0 && (
+        <section className="container-x pb-14">
+          <SectionHeader eyebrow="Competições" title="Campeonatos">
+            <Link href="/campeonatos">
+              <Button variant="outline" size="sm">Ver todos</Button>
+            </Link>
+          </SectionHeader>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {homeChampionships.map((championship) => (
+              <ChampionshipCard key={championship.id} championship={championship} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="diag-section py-14">
         <div className="container-x">

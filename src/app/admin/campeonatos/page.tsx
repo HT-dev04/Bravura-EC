@@ -24,6 +24,8 @@ function newChampionship(): Championship {
     startDate: "",
     endDate: "",
     finalPosition: "",
+    teams: [],
+    groups: [],
     players: [],
     matches: [],
   };

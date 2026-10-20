@@ -197,6 +197,8 @@ model Championship {
   startDate     String   @default("")
   endDate       String   @default("")
   finalPosition String   @default("")
+  teams         Json     @default("[]")
+  groups        Json     @default("[]")
   players       Json     @default("[]")
   matches       Json     @default("[]")
   createdAt     DateTime @default(now())

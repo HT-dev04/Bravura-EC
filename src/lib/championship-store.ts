@@ -2,15 +2,17 @@ import "server-only";
 
 import { connection } from "next/server";
 import { assetUrl } from "@/lib/asset-url";
-import { sanitizeChampionshipAdjust } from "@/lib/championship-stats";
+import { sanitizeChampionshipAdjust, STANDING_STAT_KEYS } from "@/lib/championship-stats";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
 import type {
   Championship,
+  ChampionshipGroup,
   ChampionshipMatch,
   ChampionshipPlayer,
   ChampionshipStatus,
+  ChampionshipTeam,
   MatchEvent,
   MatchStatus,
   Position,
@@ -68,16 +70,57 @@ function sanitizePlayers(players: unknown): ChampionshipPlayer[] {
   return Array.from(rows.values());
 }
 
-function sanitizeMatches(matches: unknown, playerIds: Set<string>): ChampionshipMatch[] {
+function sanitizeTeams(teams: unknown): ChampionshipTeam[] {
+  const rows = new Map<string, ChampionshipTeam>();
+  let hasBravura = false;
+  for (const item of Array.isArray(teams) ? (teams as ChampionshipTeam[]) : []) {
+    const id = text(item?.id);
+    const name = text(item?.name);
+    if (!id || !name) continue;
+    // Só um time pode ser o Bravura: é ele que recebe os resultados das partidas.
+    const isBravura = Boolean(item.isBravura) && !hasBravura;
+    if (isBravura) hasBravura = true;
+    rows.set(id, { id, name, logo: text(item.logo), ...(isBravura ? { isBravura: true } : {}) });
+  }
+  return Array.from(rows.values());
+}
+
+function sanitizeGroups(groups: unknown, teamIds: Set<string>): ChampionshipGroup[] {
+  const rows = new Map<string, ChampionshipGroup>();
+  for (const item of Array.isArray(groups) ? (groups as ChampionshipGroup[]) : []) {
+    const id = text(item?.id);
+    const name = text(item?.name);
+    if (!id || !name) continue;
+    const ids = Array.from(new Set((Array.isArray(item.teamIds) ? item.teamIds : []).filter((teamId) => teamIds.has(teamId))));
+    const manual: ChampionshipGroup["manual"] = {};
+    for (const teamId of ids) {
+      const source = item.manual?.[teamId] || {};
+      const stats: ChampionshipGroup["manual"][string] = {};
+      for (const key of STANDING_STAT_KEYS) {
+        const value = Math.max(0, int(source[key]));
+        if (value > 0) stats[key] = value;
+      }
+      if (Object.keys(stats).length > 0) manual[teamId] = stats;
+    }
+    rows.set(id, { id, name, teamIds: ids, manual });
+  }
+  return Array.from(rows.values());
+}
+
+function sanitizeMatches(matches: unknown, playerIds: Set<string>, teamIds: Set<string>, groupIds: Set<string>): ChampionshipMatch[] {
   const rows = new Map<string, ChampionshipMatch>();
   for (const item of Array.isArray(matches) ? (matches as ChampionshipMatch[]) : []) {
     const id = text(item?.id);
     const opponent = text(item?.opponent);
     if (!id || !opponent) continue;
     const highlightPlayerId = text(item.highlightPlayerId);
+    const opponentTeamId = text(item.opponentTeamId);
+    const groupId = text(item.groupId);
     rows.set(id, {
       id,
       opponent,
+      ...(teamIds.has(opponentTeamId) ? { opponentTeamId } : {}),
+      ...(groupIds.has(groupId) ? { groupId } : {}),
       opponentLogo: text(item.opponentLogo),
       date: text(item.date),
       location: text(item.location),
@@ -107,6 +150,10 @@ function sanitizeMatches(matches: unknown, playerIds: Set<string>): Championship
 function sanitizeChampionship(input: Championship): Championship {
   const players = sanitizePlayers(input.players);
   const playerIds = new Set(players.map((player) => player.id));
+  const teams = sanitizeTeams(input.teams);
+  const teamIds = new Set(teams.map((team) => team.id));
+  const groups = sanitizeGroups(input.groups, teamIds);
+  const groupIds = new Set(groups.map((group) => group.id));
   const name = text(input.name);
   const season = text(input.season) || String(new Date().getFullYear());
 
@@ -122,14 +169,17 @@ function sanitizeChampionship(input: Championship): Championship {
     startDate: text(input.startDate),
     endDate: text(input.endDate),
     finalPosition: text(input.finalPosition),
+    teams,
+    groups,
     players,
-    matches: sanitizeMatches(input.matches, playerIds),
+    matches: sanitizeMatches(input.matches, playerIds, teamIds, groupIds),
   };
 }
 
 function fromRow(row: ChampionshipRow): Championship {
   const players = row.players as unknown as ChampionshipPlayer[];
   const matches = row.matches as unknown as ChampionshipMatch[];
+  const teams = (row.teams as unknown as ChampionshipTeam[]) || [];
   return {
     id: row.id,
     slug: row.slug,
@@ -142,6 +192,8 @@ function fromRow(row: ChampionshipRow): Championship {
     startDate: row.startDate,
     endDate: row.endDate,
     finalPosition: row.finalPosition,
+    teams: teams.map((team) => ({ ...team, logo: assetUrl(team.logo) })),
+    groups: (row.groups as unknown as ChampionshipGroup[]) || [],
     players: players.map((player) => ({ ...player, photo: assetUrl(player.photo) })),
     matches: matches.map((match) => ({ ...match, opponentLogo: assetUrl(match.opponentLogo) })),
   };
@@ -159,6 +211,8 @@ function toRow(championship: Championship) {
     startDate: championship.startDate,
     endDate: championship.endDate,
     finalPosition: championship.finalPosition,
+    teams: json(championship.teams),
+    groups: json(championship.groups),
     players: json(championship.players),
     matches: json(championship.matches),
   };

@@ -85,6 +85,29 @@ export function ChampionshipMatchesTab({ championship, onSave, onError }: Props)
     void saveMatches(matches.filter((match) => !ids.has(match.id)));
   }
 
+  const opponentTeams = championship.teams.filter((team) => !team.isBravura);
+
+  function selectOpponentTeam(teamId: string) {
+    if (!editing) return;
+    const team = opponentTeams.find((row) => row.id === teamId);
+    if (!team) {
+      setEditing({ ...editing, opponentTeamId: undefined });
+      return;
+    }
+    // Jogo contra time do mesmo grupo do Bravura já vem marcado para a classificação.
+    const bravura = championship.teams.find((row) => row.isBravura);
+    const sharedGroup = championship.groups.find(
+      (group) => group.teamIds.includes(team.id) && (!bravura || group.teamIds.includes(bravura.id))
+    );
+    setEditing({
+      ...editing,
+      opponentTeamId: team.id,
+      opponent: team.name,
+      opponentLogo: team.logo,
+      groupId: editing.groupId || sharedGroup?.id,
+    });
+  }
+
   function updateEvent(index: number, patch: Partial<MatchEvent>) {
     setEditing((prev) =>
       prev ? { ...prev, events: prev.events.map((event, i) => (i === index ? { ...event, ...patch } : event)) } : prev
@@ -142,6 +165,36 @@ export function ChampionshipMatchesTab({ championship, onSave, onError }: Props)
             className="space-y-5"
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {opponentTeams.length > 0 && (
+                <div>
+                  <Label>Time adversário</Label>
+                  <Select className="mt-1" value={editing.opponentTeamId || ""} onChange={(e) => selectOpponentTeam(e.target.value)}>
+                    <option value="">Outro (digitar abaixo)</option>
+                    {opponentTeams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+              {championship.groups.length > 0 && (
+                <div>
+                  <Label>Conta na classificação</Label>
+                  <Select
+                    className="mt-1"
+                    value={editing.groupId || ""}
+                    onChange={(e) => setEditing({ ...editing, groupId: e.target.value || undefined })}
+                  >
+                    <option value="">Não (mata-mata / outro)</option>
+                    {championship.groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <Label>Adversário</Label>
                 <Input

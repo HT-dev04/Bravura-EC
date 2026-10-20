@@ -14,11 +14,15 @@ import type { Championship, ChampionshipStatus, Player } from "@/types";
 import { ImageField } from "./ImageField";
 import { ChampionshipPlayersTab } from "./ChampionshipPlayersTab";
 import { ChampionshipMatchesTab } from "./ChampionshipMatchesTab";
+import { ChampionshipStandingsTab } from "./ChampionshipStandingsTab";
+import { ChampionshipTeamsTab } from "./ChampionshipTeamsTab";
 
-type Tab = "info" | "players" | "matches";
+type Tab = "info" | "teams" | "standings" | "players" | "matches";
 
 const tabs: { key: Tab; label: string }[] = [
   { key: "info", label: "Informações" },
+  { key: "teams", label: "Times" },
+  { key: "standings", label: "Classificação" },
   { key: "players", label: "Elenco" },
   { key: "matches", label: "Partidas" },
 ];
@@ -115,6 +119,8 @@ export default function AdminCampeonatoEditorPage() {
 
       {error && <p className="mb-4 text-sm text-brand-red">{error}</p>}
 
+      {tab === "teams" && <ChampionshipTeamsTab championship={championship} onSave={persist} onError={setError} />}
+      {tab === "standings" && <ChampionshipStandingsTab championship={championship} onSave={persist} />}
       {tab === "info" && <InfoForm key={championship.id} championship={championship} onSave={persist} onError={setError} />}
       {tab === "players" && (
         <ChampionshipPlayersTab championship={championship} clubPlayers={clubPlayers} onSave={persist} onError={setError} />
@@ -146,7 +152,13 @@ function InfoForm({
         setSaved(false);
         try {
           // Elenco e partidas vêm do estado salvo para não sobrescrever o que foi lançado nas outras abas.
-          const next = await onSave({ ...draft, players: championship.players, matches: championship.matches });
+          const next = await onSave({
+            ...draft,
+            teams: championship.teams,
+            groups: championship.groups,
+            players: championship.players,
+            matches: championship.matches,
+          });
           setDraft(next);
           setSaved(true);
         } catch {

@@ -3,7 +3,13 @@ import Image from "next/image";
 import { Trophy } from "lucide-react";
 import type { Championship } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { CHAMPIONSHIP_STATUS_LABELS, getChampionshipSummary } from "@/lib/championship-stats";
+import {
+  CHAMPIONSHIP_STATUS_LABELS,
+  getBravuraTeam,
+  getChampionshipSummary,
+  getGroupStandings,
+  getTeamGroup,
+} from "@/lib/championship-stats";
 import { getInitials, getValidImageSrc } from "@/lib/image-utils";
 
 const statusVariant = { planejado: "outline", em_andamento: "red", encerrado: "gray" } as const;
@@ -35,6 +41,11 @@ export function ChampionshipLogo({ championship, size = 64 }: { championship: Ch
 export function ChampionshipCard({ championship, href }: { championship: Championship; href?: string }) {
   const summary = getChampionshipSummary(championship);
   const cover = getValidImageSrc(championship.cover);
+  const bravura = getBravuraTeam(championship);
+  const bravuraGroup = bravura ? getTeamGroup(championship, bravura.id) : undefined;
+  const groupPosition = bravuraGroup
+    ? getGroupStandings(championship, bravuraGroup).findIndex((row) => row.team.id === bravura!.id) + 1
+    : 0;
 
   return (
     <Link
@@ -63,6 +74,14 @@ export function ChampionshipCard({ championship, href }: { championship: Champio
           </div>
         </div>
       </div>
+
+      {!championship.finalPosition && bravuraGroup && groupPosition > 0 && (
+        <div className="flex items-center gap-2 border-t border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wider text-brand-white/80">
+          <span className="text-brand-gold">{bravuraGroup.name}</span>
+          <span className="text-brand-gray">·</span>
+          <span>{groupPosition}º lugar</span>
+        </div>
+      )}
 
       {championship.finalPosition && (
         <div className="flex items-center gap-2 border-t border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wider text-brand-gold">

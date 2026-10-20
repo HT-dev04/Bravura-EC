@@ -233,9 +233,38 @@ export interface ChampionshipPlayer {
   adjust?: Partial<Record<ChampionshipStatKey, number>>;
 }
 
+/** Time participante do campeonato (inclusive o próprio Bravura). */
+export interface ChampionshipTeam {
+  id: string;
+  name: string;
+  logo: string;
+  isBravura?: boolean;
+}
+
+export interface ChampionshipStandingStats {
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+}
+
+export interface ChampionshipGroup {
+  id: string;
+  name: string;
+  /** Ordem de cadastro, usada como desempate final (igual à arte oficial antes da 1ª rodada). */
+  teamIds: string[];
+  /** Jogos entre outros times, lançados à mão. Os jogos do Bravura entram sozinhos pelas partidas. */
+  manual: Record<string, Partial<ChampionshipStandingStats>>;
+}
+
 export interface ChampionshipMatch {
   id: string;
   opponent: string;
+  /** Time cadastrado na aba Times (preenche nome e escudo). */
+  opponentTeamId?: string;
+  /** Grupo em que o jogo conta para a classificação. */
+  groupId?: string;
   opponentLogo: string;
   date: string;
   location: string;
@@ -266,6 +295,8 @@ export interface Championship {
   endDate: string;
   /** Ex.: Campeão, Vice, 3º lugar. */
   finalPosition: string;
+  teams: ChampionshipTeam[];
+  groups: ChampionshipGroup[];
   players: ChampionshipPlayer[];
   matches: ChampionshipMatch[];
 }

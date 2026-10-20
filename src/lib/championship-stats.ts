@@ -1,9 +1,12 @@
 import { normalizePlayerName } from "@/lib/cms-stats";
 import type {
   Championship,
+  ChampionshipGroup,
   ChampionshipMatch,
   ChampionshipPlayer,
+  ChampionshipStandingStats,
   ChampionshipStatKey,
+  ChampionshipTeam,
   MatchEvent,
   MatchResult,
 } from "@/types";
@@ -197,6 +200,93 @@ export function getChampionshipPlayerTimeline(championship: Championship, player
   }
 
   return entries.sort((a, b) => +new Date(b.match.date) - +new Date(a.match.date));
+}
+
+export const STANDING_STAT_KEYS: (keyof ChampionshipStandingStats)[] = ["wins", "draws", "losses", "goalsFor", "goalsAgainst"];
+
+export interface ChampionshipStandingRow extends ChampionshipStandingStats {
+  team: ChampionshipTeam;
+  played: number;
+  points: number;
+  goalDiff: number;
+}
+
+export function getBravuraTeam(championship: Championship) {
+  return championship.teams.find((team) => team.isBravura);
+}
+
+function emptyStanding(): ChampionshipStandingStats {
+  return { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+}
+
+function standingValue(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : 0;
+}
+
+/**
+ * Classificação do grupo: jogos do Bravura (partidas encerradas marcadas para o grupo) entram
+ * sozinhos para os dois lados; jogos entre outros times vêm do lançamento manual.
+ */
+export function getGroupStandings(championship: Championship, group: ChampionshipGroup): ChampionshipStandingRow[] {
+  const teamsById = new Map(championship.teams.map((team) => [team.id, team]));
+  const totals = new Map<string, ChampionshipStandingStats>();
+
+  for (const teamId of group.teamIds) {
+    if (!teamsById.has(teamId)) continue;
+    const manual = group.manual[teamId] || {};
+    const row = emptyStanding();
+    for (const key of STANDING_STAT_KEYS) row[key] = standingValue(manual[key]);
+    totals.set(teamId, row);
+  }
+
+  const bravura = getBravuraTeam(championship);
+  if (bravura && totals.has(bravura.id)) {
+    for (const match of championship.matches) {
+      if (match.groupId !== group.id || !isPlayedChampionshipMatch(match)) continue;
+      const opponent = match.opponentTeamId ? totals.get(match.opponentTeamId) : undefined;
+      const own = totals.get(bravura.id)!;
+      const result = championshipMatchResult(match);
+      const goalsFor = match.scoreHome || 0;
+      const goalsAgainst = match.scoreAway || 0;
+
+      own.goalsFor += goalsFor;
+      own.goalsAgainst += goalsAgainst;
+      if (result === "V") own.wins += 1;
+      if (result === "E") own.draws += 1;
+      if (result === "D") own.losses += 1;
+
+      if (opponent) {
+        opponent.goalsFor += goalsAgainst;
+        opponent.goalsAgainst += goalsFor;
+        if (result === "D") opponent.wins += 1;
+        if (result === "E") opponent.draws += 1;
+        if (result === "V") opponent.losses += 1;
+      }
+    }
+  }
+
+  const order = new Map(group.teamIds.map((teamId, index) => [teamId, index]));
+  return Array.from(totals.entries())
+    .map(([teamId, stats]) => ({
+      team: teamsById.get(teamId)!,
+      ...stats,
+      played: stats.wins + stats.draws + stats.losses,
+      points: stats.wins * 3 + stats.draws,
+      goalDiff: stats.goalsFor - stats.goalsAgainst,
+    }))
+    .sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.wins - a.wins ||
+        b.goalDiff - a.goalDiff ||
+        b.goalsFor - a.goalsFor ||
+        (order.get(a.team.id) ?? 0) - (order.get(b.team.id) ?? 0)
+    );
+}
+
+export function getTeamGroup(championship: Championship, teamId: string) {
+  return championship.groups.find((group) => group.teamIds.includes(teamId));
 }
 
 /** Menor número de camisa livre no campeonato (começando em 1). */
