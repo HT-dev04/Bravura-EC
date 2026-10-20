@@ -378,8 +378,48 @@ function assertCmsPrismaDelegates() {
   assertPrismaDelegate("sponsorshipEntry", "SponsorshipEntry", ["findMany", "deleteMany", "upsert"]);
 }
 
+// Cache em memória (o site roda num container só): evita reconsultar o banco inteiro a cada
+// página e junta as chamadas da mesma visita (metadata + página). Toda gravação pelo admin limpa.
+// Fica em globalThis porque as rotas do admin e as páginas podem carregar cópias separadas
+// deste módulo; assim a limpeza feita ao salvar vale para todas.
+const CMS_CACHE_TTL_MS = 30_000;
+const cmsCacheState = ((globalThis as { __bravuraCmsCache?: { data: CmsData | null; expiresAt: number; loading: Promise<CmsData> | null } })
+  .__bravuraCmsCache ??= { data: null, expiresAt: 0, loading: null });
+
+function invalidateCmsCache() {
+  cmsCacheState.data = null;
+  cmsCacheState.loading = null;
+}
+
 export async function getCmsData(): Promise<CmsData> {
   await connection();
+  if (cmsCacheState.data && cmsCacheState.expiresAt > Date.now()) return structuredClone(cmsCacheState.data);
+  if (!cmsCacheState.loading) {
+    const loading: Promise<CmsData> = loadCmsData()
+      .then((data) => {
+        if (cmsCacheState.loading === loading) {
+          cmsCacheState.data = data;
+          cmsCacheState.expiresAt = Date.now() + CMS_CACHE_TTL_MS;
+        }
+        return data;
+      })
+      .finally(() => {
+        if (cmsCacheState.loading === loading) cmsCacheState.loading = null;
+      });
+    cmsCacheState.loading = loading;
+  }
+  return structuredClone(await cmsCacheState.loading);
+}
+
+/** Dados que podem ir para o navegador de qualquer visitante (sem financeiro e pedidos). */
+export async function getPublicCmsData() {
+  const { finance: _finance, orders: _orders, ...data } = await getCmsData();
+  void _finance;
+  void _orders;
+  return data;
+}
+
+async function loadCmsData(): Promise<CmsData> {
   assertCmsPrismaDelegates();
 
   const [
@@ -594,7 +634,11 @@ async function replaceCollection(collection: keyof CmsData, rows: CmsData[keyof 
 
 export async function updateCmsCollection<K extends keyof CmsData>(collection: K, rows: CmsData[K]) {
   assertCmsPrismaDelegates();
-  await withDatabaseRetry(() => replaceCollection(collection, rows));
+  try {
+    await withDatabaseRetry(() => replaceCollection(collection, rows));
+  } finally {
+    invalidateCmsCache();
+  }
   const data = await getCmsData();
 
   if (collection === "players") {

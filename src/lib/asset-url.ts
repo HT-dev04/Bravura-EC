@@ -8,6 +8,8 @@ export function assetUrl(path: string) {
   return `/media/${path}`;
 }
 
-export const bravuraLogo = "/bravura-logo.svg";
+// PNG de 512px (o next/image entrega em WebP no tamanho certo). O antigo bravura-logo.svg tinha 14 MB.
+export const bravuraLogo = "/bravura-logo.png";
+export const bravuraIcon = "/bravura-icon-192.png";
 export const bravuraOgImage = "/bravura-og.svg";
 export const avontzLogo = "/avontz-logo-dark.svg";

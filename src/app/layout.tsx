@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
-import { bravuraLogo } from "@/lib/asset-url";
+import { bravuraIcon, bravuraLogo } from "@/lib/asset-url";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -54,7 +54,10 @@ export const metadata: Metadata = {
     images: [bravuraLogo],
   },
   robots: { index: true, follow: true },
-  icons: { icon: bravuraLogo },
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "48x48" }, { url: bravuraIcon, type: "image/png", sizes: "192x192" }],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {

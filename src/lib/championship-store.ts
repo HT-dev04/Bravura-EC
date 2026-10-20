@@ -216,18 +216,47 @@ function toRow(championship: Championship) {
   };
 }
 
-export async function listChampionships(): Promise<Championship[]> {
-  await connection();
+// Mesmo esquema do cms-store: cache curto em memória, limpo a cada gravação do admin.
+const CHAMPIONSHIP_CACHE_TTL_MS = 30_000;
+const championshipCacheState = ((
+  globalThis as { __bravuraChampionshipCache?: { rows: Championship[] | null; expiresAt: number; loading: Promise<Championship[]> | null } }
+).__bravuraChampionshipCache ??= { rows: null, expiresAt: 0, loading: null });
+
+function invalidateChampionshipCache() {
+  championshipCacheState.rows = null;
+  championshipCacheState.loading = null;
+}
+
+async function loadChampionships() {
   const rows = await withDatabaseRetry(() =>
     prisma.championship.findMany({ orderBy: [{ season: "desc" }, { startDate: "desc" }, { createdAt: "desc" }] })
   );
   return rows.map(fromRow);
 }
 
-export async function getChampionshipBySlug(slug: string): Promise<Championship | null> {
+export async function listChampionships(): Promise<Championship[]> {
   await connection();
-  const row = await withDatabaseRetry(() => prisma.championship.findUnique({ where: { slug } }));
-  return row ? fromRow(row) : null;
+  const state = championshipCacheState;
+  if (state.rows && state.expiresAt > Date.now()) return structuredClone(state.rows);
+  if (!state.loading) {
+    const loading: Promise<Championship[]> = loadChampionships()
+      .then((rows) => {
+        if (state.loading === loading) {
+          state.rows = rows;
+          state.expiresAt = Date.now() + CHAMPIONSHIP_CACHE_TTL_MS;
+        }
+        return rows;
+      })
+      .finally(() => {
+        if (state.loading === loading) state.loading = null;
+      });
+    state.loading = loading;
+  }
+  return structuredClone(await state.loading);
+}
+
+export async function getChampionshipBySlug(slug: string): Promise<Championship | null> {
+  return (await listChampionships()).find((championship) => championship.slug === slug) || null;
 }
 
 /** Slug do jogador do elenco (amistosos) para linkar o perfil, se o inscrito foi importado de lá. */
@@ -263,9 +292,9 @@ export async function saveChampionship(input: Championship): Promise<Championshi
       create: { id: championship.id, ...data },
     });
     return fromRow(row);
-  });
+  }).finally(invalidateChampionshipCache);
 }
 
 export async function deleteChampionship(id: string) {
-  await withDatabaseRetry(() => prisma.championship.deleteMany({ where: { id } }));
+  await withDatabaseRetry(() => prisma.championship.deleteMany({ where: { id } })).finally(invalidateChampionshipCache);
 }
