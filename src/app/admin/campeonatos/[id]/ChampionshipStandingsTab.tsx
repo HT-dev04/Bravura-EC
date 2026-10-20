@@ -99,8 +99,9 @@ export function ChampionshipStandingsTab({ championship, onSave }: Props) {
         </div>
       </div>
       <p className="mb-6 max-w-3xl text-xs text-brand-gray">
-        Os jogos do Bravura entram sozinhos quando a partida está encerrada e marcada com o grupo. Nos campos V, E, D, GP e GC lance só os
-        jogos entre os outros times. P (pontos), J (jogos) e SG (saldo) são calculados.
+        Os jogos do Bravura entram sozinhos quando a partida está encerrada e marcada como fase de grupos — para o Bravura e para o
+        adversário, cada um no seu grupo (vale para Grupo A x Grupo B). Nos campos V, E, D, GP e GC lance só os jogos entre os outros
+        times. P (pontos), J (jogos) e SG (saldo) são calculados.
       </p>
 
       {championship.teams.length === 0 && (

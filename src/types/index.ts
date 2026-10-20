@@ -263,8 +263,11 @@ export interface ChampionshipMatch {
   opponent: string;
   /** Time cadastrado na aba Times (preenche nome e escudo). */
   opponentTeamId?: string;
-  /** Grupo em que o jogo conta para a classificação. */
-  groupId?: string;
+  /**
+   * Jogo da fase de grupos: o resultado entra na classificação do grupo de cada time
+   * (vale também para confronto entre grupos, ex.: Grupo A x Grupo B).
+   */
+  groupStage?: boolean;
   opponentLogo: string;
   date: string;
   location: string;

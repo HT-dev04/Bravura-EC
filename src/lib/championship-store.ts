@@ -107,7 +107,7 @@ function sanitizeGroups(groups: unknown, teamIds: Set<string>): ChampionshipGrou
   return Array.from(rows.values());
 }
 
-function sanitizeMatches(matches: unknown, playerIds: Set<string>, teamIds: Set<string>, groupIds: Set<string>): ChampionshipMatch[] {
+function sanitizeMatches(matches: unknown, playerIds: Set<string>, teamIds: Set<string>): ChampionshipMatch[] {
   const rows = new Map<string, ChampionshipMatch>();
   for (const item of Array.isArray(matches) ? (matches as ChampionshipMatch[]) : []) {
     const id = text(item?.id);
@@ -115,12 +115,11 @@ function sanitizeMatches(matches: unknown, playerIds: Set<string>, teamIds: Set<
     if (!id || !opponent) continue;
     const highlightPlayerId = text(item.highlightPlayerId);
     const opponentTeamId = text(item.opponentTeamId);
-    const groupId = text(item.groupId);
     rows.set(id, {
       id,
       opponent,
       ...(teamIds.has(opponentTeamId) ? { opponentTeamId } : {}),
-      ...(groupIds.has(groupId) ? { groupId } : {}),
+      ...(item.groupStage ? { groupStage: true } : {}),
       opponentLogo: text(item.opponentLogo),
       date: text(item.date),
       location: text(item.location),
@@ -153,7 +152,6 @@ function sanitizeChampionship(input: Championship): Championship {
   const teams = sanitizeTeams(input.teams);
   const teamIds = new Set(teams.map((team) => team.id));
   const groups = sanitizeGroups(input.groups, teamIds);
-  const groupIds = new Set(groups.map((group) => group.id));
   const name = text(input.name);
   const season = text(input.season) || String(new Date().getFullYear());
 
@@ -172,7 +170,7 @@ function sanitizeChampionship(input: Championship): Championship {
     teams,
     groups,
     players,
-    matches: sanitizeMatches(input.matches, playerIds, teamIds, groupIds),
+    matches: sanitizeMatches(input.matches, playerIds, teamIds),
   };
 }
 

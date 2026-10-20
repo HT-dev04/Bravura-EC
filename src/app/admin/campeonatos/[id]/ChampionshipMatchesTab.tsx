@@ -94,17 +94,14 @@ export function ChampionshipMatchesTab({ championship, onSave, onError }: Props)
       setEditing({ ...editing, opponentTeamId: undefined });
       return;
     }
-    // Jogo contra time do mesmo grupo do Bravura já vem marcado para a classificação.
-    const bravura = championship.teams.find((row) => row.isBravura);
-    const sharedGroup = championship.groups.find(
-      (group) => group.teamIds.includes(team.id) && (!bravura || group.teamIds.includes(bravura.id))
-    );
+    // Adversário que está em algum grupo: o jogo já vem marcado como fase de grupos.
+    const inGroup = championship.groups.some((group) => group.teamIds.includes(team.id));
     setEditing({
       ...editing,
       opponentTeamId: team.id,
       opponent: team.name,
       opponentLogo: team.logo,
-      groupId: editing.groupId || sharedGroup?.id,
+      groupStage: editing.groupStage || inGroup || undefined,
     });
   }
 
@@ -179,21 +176,14 @@ export function ChampionshipMatchesTab({ championship, onSave, onError }: Props)
                 </div>
               )}
               {championship.groups.length > 0 && (
-                <div>
-                  <Label>Conta na classificação</Label>
-                  <Select
-                    className="mt-1"
-                    value={editing.groupId || ""}
-                    onChange={(e) => setEditing({ ...editing, groupId: e.target.value || undefined })}
-                  >
-                    <option value="">Não (mata-mata / outro)</option>
-                    {championship.groups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
+                <label className="flex items-center gap-2 self-end pb-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editing.groupStage)}
+                    onChange={(e) => setEditing({ ...editing, groupStage: e.target.checked || undefined })}
+                  />
+                  Vale pela fase de grupos (entra na classificação)
+                </label>
               )}
               <div className="sm:col-span-2">
                 <Label>Adversário</Label>

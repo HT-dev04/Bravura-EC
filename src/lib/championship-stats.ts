@@ -225,8 +225,9 @@ function standingValue(value: unknown) {
 }
 
 /**
- * Classificação do grupo: jogos do Bravura (partidas encerradas marcadas para o grupo) entram
- * sozinhos para os dois lados; jogos entre outros times vêm do lançamento manual.
+ * Classificação do grupo: jogos do Bravura marcados como fase de grupos entram sozinhos — para o
+ * Bravura no grupo dele e para o adversário no grupo do adversário (os grupos podem se enfrentar
+ * entre si). Jogos entre outros times vêm do lançamento manual.
  */
 export function getGroupStandings(championship: Championship, group: ChampionshipGroup): ChampionshipStandingRow[] {
   const teamsById = new Map(championship.teams.map((team) => [team.id, team]));
@@ -241,20 +242,22 @@ export function getGroupStandings(championship: Championship, group: Championshi
   }
 
   const bravura = getBravuraTeam(championship);
-  if (bravura && totals.has(bravura.id)) {
+  if (bravura) {
     for (const match of championship.matches) {
-      if (match.groupId !== group.id || !isPlayedChampionshipMatch(match)) continue;
+      if (!match.groupStage || !isPlayedChampionshipMatch(match)) continue;
+      const own = totals.get(bravura.id);
       const opponent = match.opponentTeamId ? totals.get(match.opponentTeamId) : undefined;
-      const own = totals.get(bravura.id)!;
       const result = championshipMatchResult(match);
       const goalsFor = match.scoreHome || 0;
       const goalsAgainst = match.scoreAway || 0;
 
-      own.goalsFor += goalsFor;
-      own.goalsAgainst += goalsAgainst;
-      if (result === "V") own.wins += 1;
-      if (result === "E") own.draws += 1;
-      if (result === "D") own.losses += 1;
+      if (own) {
+        own.goalsFor += goalsFor;
+        own.goalsAgainst += goalsAgainst;
+        if (result === "V") own.wins += 1;
+        if (result === "E") own.draws += 1;
+        if (result === "D") own.losses += 1;
+      }
 
       if (opponent) {
         opponent.goalsFor += goalsAgainst;
