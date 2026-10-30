@@ -5,7 +5,21 @@ import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { isRankingArtStyle, type RankingArtStyle, type RankingShareItem } from "@/lib/ranking-share";
 import { getObject, MEDIA_PREFIX } from "@/lib/storage";
-import { ART_HEIGHT, ART_WIDTH, FrameOverlay, PodiumArt, SpotlightArt, type ArtItem, type ArtProps, type FrameSiteBox } from "./layouts";
+import {
+  ART_HEIGHT,
+  ART_WIDTH,
+  CardsArt,
+  CoverArt,
+  FrameOverlay,
+  HeadlineArt,
+  NeonArt,
+  PodiumArt,
+  ScoreboardArt,
+  SpotlightArt,
+  type ArtItem,
+  type ArtProps,
+  type FrameSiteBox,
+} from "./layouts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +34,6 @@ type Payload = {
 };
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
-const PHOTO_SMALL = 220;
-const PHOTO_LARGE = 360;
 const PHOTO_TIMEOUT_MS = 6000;
 const DEFAULT_SITE = "bravura.avontz.com.br";
 
@@ -38,6 +50,24 @@ const FRAMES: Partial<Record<RankingArtStyle, { file: string; listTop: number; s
     listTop: 635,
     siteBox: { left: 200, top: 1688, width: 680, height: 86, background: "#070707", color: "#ffffff", fontSize: 56, pill: false },
   },
+};
+
+// Formato da foto que cada estilo usa por posição: círculo (padrão) ou retrato com cantos arredondados.
+type PhotoSpec = { width: number; height: number; radius?: number; large?: boolean };
+
+const CIRCLE_SMALL: PhotoSpec = { width: 220, height: 220 };
+const CIRCLE_LARGE: PhotoSpec = { width: 360, height: 360, large: true };
+
+const PHOTO_SPECS: Record<RankingArtStyle, (index: number) => PhotoSpec> = {
+  podio: (index) => (index < 3 ? CIRCLE_LARGE : CIRCLE_SMALL),
+  destaque: (index) => (index === 0 ? CIRCLE_LARGE : CIRCLE_SMALL),
+  classica: () => CIRCLE_SMALL,
+  ouro: () => CIRCLE_SMALL,
+  capa: (index) => (index === 0 ? { width: 760, height: 1000, radius: 0, large: true } : CIRCLE_SMALL),
+  figurinha: (index) => (index === 0 ? { width: 560, height: 540, radius: 22, large: true } : { width: 188, height: 230, radius: 14 }),
+  placar: () => CIRCLE_SMALL,
+  neon: (index) => (index === 0 ? CIRCLE_LARGE : CIRCLE_SMALL),
+  manchete: (index) => (index === 0 ? { width: 460, height: 580, radius: 0, large: true } : CIRCLE_SMALL),
 };
 
 // Caches do processo — molduras, fontes e escudo não mudam; fotos e artes prontas têm limite de itens.
@@ -75,6 +105,7 @@ function decodePayload(d: string): Payload {
       photo: text(item?.photo, 600) || undefined,
       value: Number(item?.value),
       label: text(item?.label, 16),
+      number: Number.isInteger(item?.number) && (item.number as number) > 0 ? (item.number as number) : undefined,
     }))
     .filter((item) => item.name && Number.isFinite(item.value))
     .slice(0, 5);
@@ -155,25 +186,28 @@ async function readPhotoSource(src: string) {
   return null;
 }
 
-// Recorta a foto num círculo do tamanho pedido e devolve como data URL.
+// Recorta a foto no formato pedido (círculo ou retrato com cantos) e devolve como data URL.
 // Qualquer falha (timeout, formato inválido, host fora do ar) cai no fallback (inicial).
-async function loadPhoto(src: string | undefined, size: number): Promise<string | undefined> {
+async function loadPhoto(src: string | undefined, spec: PhotoSpec): Promise<string | undefined> {
   if (!src) return undefined;
   if (src.startsWith("data:")) return src;
 
-  const key = `${size}:${src}`;
+  const { width, height } = spec;
+  const radius = spec.radius ?? Math.min(width, height) / 2;
+  const key = `${width}x${height}r${radius}:${src}`;
   if (photoCache.has(key)) return photoCache.get(key);
 
   let photo: string | undefined;
   try {
     const source = await readPhotoSource(src);
     if (source) {
-      // Máscara circular: a foto já sai redonda (cantos transparentes),
+      // Máscara aplicada aqui: a foto já sai recortada (cantos transparentes),
       // garantindo o recorte perfeito independente do renderizador.
-      const mask = Buffer.from(`<svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#fff"/></svg>`);
+      // Retratos ancoram no topo para não cortar o rosto; círculos ficam centralizados como antes.
+      const mask = Buffer.from(`<svg width="${width}" height="${height}"><rect width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="#fff"/></svg>`);
       const out = await sharp(source)
         .rotate()
-        .resize(size, size, { fit: "cover", position: "centre" })
+        .resize(width, height, { fit: "cover", position: width === height ? "centre" : "top" })
         .composite([{ input: mask, blend: "dest-in" }])
         .png({ compressionLevel: 3 })
         .toBuffer();
@@ -198,18 +232,29 @@ function toJpeg(image: sharp.Sharp) {
   return image.jpeg({ quality: 88, chromaSubsampling: "4:4:4" }).toBuffer();
 }
 
+const LAYOUTS: Partial<Record<RankingArtStyle, (props: ArtProps) => ReactElement>> = {
+  podio: PodiumArt,
+  destaque: SpotlightArt,
+  capa: CoverArt,
+  figurinha: CardsArt,
+  placar: ScoreboardArt,
+  neon: NeonArt,
+  manchete: HeadlineArt,
+};
+
 async function renderArt(payload: Payload) {
-  // Quantos jogadores ganham foto grande em cada estilo.
-  const largePhotos = payload.style === "podio" ? 3 : payload.style === "destaque" ? 1 : 0;
+  const photoSpec = PHOTO_SPECS[payload.style];
   const frame = FRAMES[payload.style];
 
   const [fonts, logo, photos, frameRaw] = await Promise.all([
     loadFonts(),
     frame ? undefined : loadLogo(),
     Promise.all(
-      payload.items.map(async (item, index): Promise<Pick<ArtItem, "photoSmall" | "photoLarge">> =>
-        index < largePhotos ? { photoLarge: await loadPhoto(item.photo, PHOTO_LARGE) } : { photoSmall: await loadPhoto(item.photo, PHOTO_SMALL) }
-      )
+      payload.items.map(async (item, index): Promise<Pick<ArtItem, "photoSmall" | "photoLarge">> => {
+        const spec = photoSpec(index);
+        const photo = await loadPhoto(item.photo, spec);
+        return spec.large ? { photoLarge: photo } : { photoSmall: photo };
+      })
     ),
     frame ? loadFrame(frame.file) : undefined,
   ]);
@@ -227,7 +272,8 @@ async function renderArt(payload: Payload) {
     return toJpeg(sharp(frameRaw, { raw: { width: ART_WIDTH, height: ART_HEIGHT, channels: 3 } }).composite([{ input: overlay }]));
   }
 
-  const art = payload.style === "destaque" ? <SpotlightArt {...props} /> : <PodiumArt {...props} />;
+  const Layout = LAYOUTS[payload.style] || PodiumArt;
+  const art = <Layout {...props} />;
   return toJpeg(sharp(await renderPng(art, fonts)).flatten({ background: "#0a0a0a" }));
 }
 

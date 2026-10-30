@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Download, Shuffle, Share2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
-import { encodeRankingPayload, RANKING_ART_STYLES, type RankingArtStyle, type RankingShareItem } from "@/lib/ranking-share";
+import { encodeRankingPayload, randomRankingArtStyle, RANKING_ART_STYLES, type RankingArtStyle, type RankingShareItem } from "@/lib/ranking-share";
 
 export type { RankingShareItem };
 
@@ -38,7 +38,7 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
       const cleanItems = items
         .filter((item) => item.name && Number.isFinite(item.value))
         .slice(0, 5)
-        .map((item) => ({ id: item.id, name: item.name, photo: item.photo, value: item.value, label: item.label }));
+        .map((item) => ({ id: item.id, name: item.name, photo: item.photo, value: item.value, label: item.label, number: item.number }));
       return `/api/ranking-image?d=${encodeRankingPayload({ title, subtitle, style: artStyle, site: siteLabel, items: cleanItems })}`;
     },
     [title, subtitle, items, siteLabel]
@@ -67,8 +67,9 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
   );
 
   // Começa a gerar assim que a pessoa encosta no botão: quando o modal abre a arte já está a caminho.
+  // A arte é sorteada uma vez por abertura, então cada compartilhamento tende a sair diferente.
   function prepare() {
-    const chosen = style ?? RANKING_ART_STYLES[Math.floor(Math.random() * RANKING_ART_STYLES.length)].id;
+    const chosen = style ?? randomRankingArtStyle();
     if (!style) setStyle(chosen);
     loadArt(chosen);
   }
@@ -77,6 +78,16 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
     setMessage(null);
     prepare();
     setOpen(true);
+  }
+
+  function closeShareModal() {
+    setOpen(false);
+    // Na próxima abertura sai outra arte sorteada.
+    setStyle(null);
+  }
+
+  function shuffleStyle() {
+    selectStyle(randomRankingArtStyle(style));
   }
 
   function selectStyle(next: RankingArtStyle) {
@@ -171,7 +182,7 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
         Compartilhar ranking
       </button>
 
-      <Dialog open={open} onClose={() => setOpen(false)} title="Compartilhar ranking" className="max-w-4xl">
+      <Dialog open={open} onClose={closeShareModal} title="Compartilhar ranking" className="max-w-4xl">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="overflow-hidden rounded-sm border border-brand-border bg-brand-black p-3">
             <div className="relative mx-auto aspect-[9/16] max-h-[44vh] max-w-sm overflow-hidden rounded-sm bg-brand-black lg:max-h-[70vh]">
@@ -203,8 +214,18 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
 
           <div className="space-y-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-gray">Estilo da arte</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-gray">Estilo da arte</p>
+                <button
+                  type="button"
+                  onClick={shuffleStyle}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-brand-gold transition-colors hover:text-brand-white"
+                >
+                  <Shuffle className="h-3.5 w-3.5" />
+                  Sortear outra
+                </button>
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2">
                 {RANKING_ART_STYLES.map((option) => (
                   <button
                     key={option.id}
@@ -212,7 +233,7 @@ export function RankingShareModal({ title, subtitle, items, shareUrl, siteLabel 
                     aria-pressed={style === option.id}
                     onClick={() => selectStyle(option.id)}
                     onPointerEnter={() => loadArt(option.id)}
-                    className={`rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                    className={`whitespace-nowrap rounded-sm border px-1 py-2 text-[11px] font-semibold uppercase transition-colors ${
                       style === option.id
                         ? "border-brand-gold bg-brand-gold/15 text-brand-gold"
                         : "border-brand-border text-brand-white hover:border-brand-gold/60"

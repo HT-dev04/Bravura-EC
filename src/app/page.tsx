@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Calendar, Gamepad2, Handshake, MapPin, Sparkles, Target, Trophy } from "lucide-react";
+import { ArrowRight, Calendar, MapPin, Trophy } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
 import { MatchCard } from "@/components/site/MatchCard";
 import { NewsCard } from "@/components/site/NewsCard";
 import { SponsorGrid } from "@/components/site/SponsorGrid";
 import { ChampionshipCard } from "@/components/site/ChampionshipCard";
-import { RankingShareModal } from "@/components/site/RankingShareModal";
+import { RankingPanel } from "@/components/site/RankingPanel";
 import { Button } from "@/components/ui/button";
 import { clubInfo } from "@/data/club";
 import { getCmsData } from "@/lib/cms-store";
 import { listChampionships } from "@/lib/championship-store";
 import { bravuraLogo } from "@/lib/asset-url";
-import { getInitials, getValidImageSrc } from "@/lib/image-utils";
+import { getValidImageSrc } from "@/lib/image-utils";
 import { getPlayerRankings, getTeamStats } from "@/lib/cms-stats";
 import { absoluteUrl, siteUrl } from "@/lib/site-url";
 import { formatDateLong, formatTime } from "@/lib/utils";
@@ -155,11 +155,11 @@ export default async function HomePage() {
       <section id="rankings" className="container-x py-14 scroll-mt-24">
         <SectionHeader eyebrow="Rankings" title="Destaques individuais" />
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          <RankingPanel title="Artilheiros" shareTitle="Top Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/artilheiros" />
-          <RankingPanel title="Assistentes" shareTitle="Top Assistências" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/assistentes" />
-          <RankingPanel title="Part. em gols" shareTitle="Top Participações em Gol" icon="participations" rows={topGoalParticipations.map((player) => ({ player, value: player.stats.goals + player.stats.assists, label: "part." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/participacoes" />
-          <RankingPanel title="Mais jogos" shareTitle="Mais Jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} showZeroValues fullRankingHref="/rankings/jogos" />
-          <RankingPanel title="Craques do jogo" shareTitle="Craques do Jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/craques" />
+          <HomeRankingPanel title="Artilheiros" shareTitle="Top Artilheiros" icon="goals" rows={topScorers.map((player) => ({ player, value: player.stats.goals, label: "gols" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/artilheiros" />
+          <HomeRankingPanel title="Assistentes" shareTitle="Top Assistências" icon="assists" rows={topAssists.map((player) => ({ player, value: player.stats.assists, label: "assist." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/assistentes" />
+          <HomeRankingPanel title="Part. em gols" shareTitle="Top Participações em Gol" icon="participations" rows={topGoalParticipations.map((player) => ({ player, value: player.stats.goals + player.stats.assists, label: "part." }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/participacoes" />
+          <HomeRankingPanel title="Mais jogos" shareTitle="Mais Jogos" icon="games" rows={topGames.map((player) => ({ player, value: player.stats.games, label: "jogos" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} showZeroValues fullRankingHref="/rankings/jogos" />
+          <HomeRankingPanel title="Craques do jogo" shareTitle="Craques do Jogo" icon="stars" rows={topHighlights.map(({ player, count }) => ({ player, value: count, label: "vezes" }))} shareUrl={rankingShareUrl} siteLabel={siteLabel} fullRankingHref="/rankings/craques" />
         </div>
       </section>
 
@@ -420,7 +420,10 @@ function TickerMatchCard({ match }: { match: Match }) {
   );
 }
 
-function RankingPanel({
+type HomeRankingIcon = "goals" | "assists" | "games" | "stars" | "participations";
+
+// Painel da home: mesmo cartão dos rankings do campeonato, com os números da temporada inteira.
+function HomeRankingPanel({
   title,
   shareTitle,
   icon,
@@ -432,76 +435,37 @@ function RankingPanel({
 }: {
   title: string;
   shareTitle: string;
-  icon: "goals" | "assists" | "games" | "stars" | "participations";
+  icon: HomeRankingIcon;
   rows: Array<{ player: Player; value: number; label: string }>;
   shareUrl: string;
   siteLabel: string;
   showZeroValues?: boolean;
   fullRankingHref: string;
 }) {
-  const Icon = icon === "goals" ? Trophy : icon === "assists" ? Handshake : icon === "games" ? Gamepad2 : icon === "participations" ? Target : Sparkles;
-  const accent = icon === "goals" || icon === "stars" || icon === "participations" ? "text-brand-red" : "text-brand-gold";
+  const accent = icon === "goals" || icon === "stars" || icon === "participations" ? "red" : "gold";
   const rankedRows = showZeroValues ? rows : rows.filter((row) => row.value > 0);
-  const visibleRows = rankedRows.slice(0, 4);
-  const shareItems = rankedRows
-    .slice(0, 5)
-    .map((row) => ({
-      id: row.player.id,
-      name: row.player.nickname || row.player.name,
-      photo: getValidImageSrc(row.player.photo) || undefined,
-      value: row.value,
-      label: row.label,
-    }));
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-sm border border-brand-border bg-brand-black-2">
-      <div className="space-y-3 border-b border-brand-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${accent}`} />
-          <h3 className="font-display text-lg uppercase tracking-wide">{title}</h3>
-        </div>
-        <RankingShareModal title={shareTitle} subtitle="Temporada 2026" items={shareItems} shareUrl={shareUrl} siteLabel={siteLabel} />
-      </div>
-      <div className="divide-y divide-brand-border">
-        {visibleRows.length > 0 ? (
-          visibleRows.map((row, index) => (
-            <Link
-              key={row.player.id}
-              href={`/elenco/${row.player.slug}`}
-              className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-white/5"
-            >
-              <span className="w-6 shrink-0 text-center font-display text-lg text-brand-gold">{index + 1}</span>
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-brand-black">
-                {getValidImageSrc(row.player.photo) ? (
-                  <Image src={getValidImageSrc(row.player.photo)!} alt={row.player.name} fill sizes="40px" className="object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs font-bold text-brand-gold">
-                    {getInitials(row.player.nickname || row.player.name)}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-display uppercase leading-tight">{row.player.nickname || row.player.name}</p>
-                <p className="truncate text-[10px] uppercase text-brand-gray">#{row.player.number} · {row.player.position}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className={`font-display text-2xl font-bold leading-none ${accent}`}>{row.value}</p>
-                <p className="text-[9px] uppercase text-brand-gray">{row.label}</p>
-              </div>
-            </Link>
-          ))
-        ) : (
-          <p className="p-4 text-sm text-brand-gray">Sem dados registrados.</p>
-        )}
-      </div>
-      <Link
-        href={fullRankingHref}
-        className="flex items-center justify-center gap-1.5 border-t border-brand-border px-4 py-3 text-xs font-semibold uppercase tracking-widest text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-white"
-      >
-        Ver mais
-        <ArrowRight className="h-3.5 w-3.5" />
-      </Link>
-    </div>
+    <RankingPanel
+      title={title}
+      icon={icon}
+      accent={accent}
+      unit={rows[0]?.label || ""}
+      rows={rankedRows.map((row) => ({
+        id: row.player.id,
+        name: row.player.nickname || row.player.name,
+        photo: row.player.photo,
+        number: row.player.number,
+        position: row.player.position,
+        href: `/elenco/${row.player.slug}`,
+        value: row.value,
+      }))}
+      shareTitle={shareTitle}
+      shareSubtitle="Temporada 2026"
+      shareUrl={shareUrl}
+      siteLabel={siteLabel}
+      fullRankingHref={fullRankingHref}
+    />
   );
 }
 

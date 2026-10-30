@@ -13,7 +13,10 @@ const BLACK = "#0a0a0a";
 const MEDALS = [GOLD, "#c7ccd1", "#c0773a"];
 
 export type ArtItem = RankingShareItem & {
-  /** Foto já recortada em círculo (data URL). `photoLarge` só vem para quem aparece em destaque. */
+  /**
+   * Foto já recortada (data URL) no formato que o layout pediu em PHOTO_SPECS da rota:
+   * círculo na maioria, retrato retangular na Capa, Figurinha e Manchete. `photoLarge` é a de destaque.
+   */
   photoSmall?: string;
   photoLarge?: string;
 };
@@ -29,6 +32,13 @@ export type ArtProps = {
 // A Oswald em caixa alta ocupa ~0,52em por letra: reduz a fonte para o texto caber na largura.
 function fitFont(text: string, max: number, width: number, min = 24) {
   const size = Math.floor(width / (Math.max(text.length, 1) * 0.52));
+  return Math.max(min, Math.min(max, size));
+}
+
+// Mesmo cálculo para textos com letter-spacing (o espaçamento soma em cada letra).
+function fitSpaced(text: string, max: number, width: number, spacing: number, min = 18) {
+  const length = Math.max(text.length, 1);
+  const size = Math.floor((width - length * spacing) / (length * 0.52));
   return Math.max(min, Math.min(max, size));
 }
 
@@ -219,7 +229,7 @@ export function FrameOverlay({ title, subtitle, site, items, listTop, siteBox }:
       </div>
       <div style={{ position: "absolute", left: "122px", top: `${listTop}px`, width: `${width}px`, display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-          <div style={{ display: "flex", color: RED, fontSize: "30px", fontWeight: 700, letterSpacing: "8px", textTransform: "uppercase" }}>{subtitle}</div>
+          <div style={{ display: "flex", color: RED, fontSize: `${fitSpaced(subtitle, 30, width, 8)}px`, fontWeight: 700, letterSpacing: "8px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{subtitle}</div>
           <div
             style={{
               display: "flex",
@@ -340,7 +350,7 @@ function Header({ logo, title, subtitle }: Pick<ArtProps, "logo" | "title" | "su
       >
         {title}
       </div>
-      <div style={{ display: "flex", marginTop: "2px", fontSize: "30px", fontWeight: 700, letterSpacing: "8px", textTransform: "uppercase", color: RED }}>{subtitle}</div>
+      <div style={{ display: "flex", marginTop: "2px", fontSize: `${fitSpaced(subtitle, 30, 960, 8)}px`, fontWeight: 700, letterSpacing: "8px", textTransform: "uppercase", whiteSpace: "nowrap", color: RED }}>{subtitle}</div>
     </div>
   );
 }
@@ -556,5 +566,542 @@ export function SpotlightArt(props: ArtProps): ReactElement {
       )}
       <Footer site={props.site} />
     </Canvas>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Estilos extras: cada um com identidade própria, para a arte sorteada não parecer sempre a mesma.
+// ---------------------------------------------------------------------------------------------
+
+/** Foto retangular (já recortada com cantos pela rota) ou, sem foto, a inicial num bloco escuro. */
+function Portrait({ src, name, width, height, radius = 0, border }: { src?: string; name: string; width: number; height: number; radius?: number; border?: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        width: `${width}px`,
+        height: `${height}px`,
+        borderRadius: `${radius}px`,
+        border: border || "0",
+        background: "linear-gradient(180deg, #2a0509, #0a0a0a)",
+        overflow: "hidden",
+      }}
+    >
+      {src ? (
+        <img src={src} alt="" width={width} height={height} style={{ width: `${width}px`, height: `${height}px`, objectFit: "cover" }} />
+      ) : (
+        <div style={{ display: "flex", fontSize: `${Math.round(Math.min(width, height) * 0.42)}px`, fontWeight: 700, color: GOLD, textTransform: "uppercase" }}>
+          {name.slice(0, 1)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PositionBadge({ position, size, background = RED, color = WHITE }: { position: number; size: number; background?: string; color?: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: `${Math.round(size * 0.22)}px`,
+        backgroundColor: background,
+        color,
+        fontSize: `${Math.round(size * 0.44)}px`,
+        fontWeight: 700,
+      }}
+    >
+      {`${position}º`}
+    </div>
+  );
+}
+
+/** Lista compacta do 2º ao 5º, comum à Capa. */
+function RestList({ items, top, left, width, start = 2 }: { items: ArtItem[]; top: number; left: number; width: number; start?: number }) {
+  if (items.length === 0) return null;
+  return (
+    <div style={{ position: "absolute", display: "flex", flexDirection: "column", gap: "16px", top: `${top}px`, left: `${left}px`, width: `${width}px` }}>
+      {items.map((item, index) => (
+        <RankRow key={item.id} item={item} position={index + start} size={ROW_COMPACT} width={width} />
+      ))}
+    </div>
+  );
+}
+
+/** Capa: foto do líder em destaque como arte de apresentação, faixa diagonal com nome e número. */
+export function CoverArt(props: ArtProps): ReactElement {
+  const { title, subtitle, logo, items, site } = props;
+  const [leader, ...rest] = items;
+
+  return (
+    <Canvas>
+      {leader && (
+        <div style={{ position: "absolute", display: "flex", top: 0, right: 0, width: "760px", height: "1000px" }}>
+          <Portrait src={leader.photoLarge} name={leader.name} width={760} height={1000} />
+          <div
+            style={{
+              position: "absolute",
+              display: "flex",
+              top: 0,
+              left: 0,
+              width: "760px",
+              height: "1000px",
+              background: "linear-gradient(90deg, #0a0a0a 0%, rgba(10,10,10,0.55) 30%, rgba(10,10,10,0) 60%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              display: "flex",
+              bottom: 0,
+              left: 0,
+              width: "760px",
+              height: "420px",
+              background: "linear-gradient(180deg, rgba(10,10,10,0), #0a0a0a)",
+            }}
+          />
+        </div>
+      )}
+
+      <div style={{ position: "absolute", display: "flex", flexDirection: "column", top: "70px", left: "64px", width: "560px" }}>
+        {logo ? <img src={logo} alt="" width={132} height={160} style={{ width: "132px", height: "160px" }} /> : <div style={{ display: "flex", height: "160px" }} />}
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "34px" }}>
+          <Star size={22} />
+          <div style={{ display: "flex", fontSize: "30px", fontWeight: 500, letterSpacing: "14px", color: GOLD }}>RANKING</div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            marginTop: "10px",
+            width: "560px",
+            fontSize: `${fitFont(title, 104, 1000, 52)}px`,
+            fontWeight: 700,
+            lineHeight: 0.98,
+            textTransform: "uppercase",
+            color: WHITE,
+            textShadow: "0 6px 18px rgba(0,0,0,0.9)",
+          }}
+        >
+          {title}
+        </div>
+        <div style={{ display: "flex", width: "120px", height: "8px", marginTop: "26px", backgroundColor: RED }} />
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            marginTop: "20px",
+            width: "520px",
+            fontSize: `${fitSpaced(subtitle, 30, 1000, 5)}px`,
+            fontWeight: 600,
+            letterSpacing: "5px",
+            lineHeight: 1.3,
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.8)",
+          }}
+        >
+          {subtitle}
+        </div>
+      </div>
+
+      {!leader ? (
+        <EmptyBlock />
+      ) : (
+        <div style={{ position: "absolute", display: "flex", top: "860px", left: "-40px", width: "1160px", height: "230px", transform: "rotate(-4deg)" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              width: "1160px",
+              height: "230px",
+              padding: "0 100px 0 104px",
+              gap: "34px",
+              background: `linear-gradient(90deg, ${RED}, #8a0a1f)`,
+              borderTop: `6px solid ${GOLD}`,
+              borderBottom: `6px solid ${GOLD}`,
+              boxShadow: "0 30px 60px rgba(0,0,0,0.6)",
+            }}
+          >
+            <PositionBadge position={1} size={120} background={GOLD} color={BLACK} />
+            <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", fontSize: "24px", fontWeight: 600, letterSpacing: "8px", color: "rgba(255,255,255,0.8)" }}>
+                {leader.number ? `CAMISA ${leader.number} · LÍDER` : "LÍDER DO RANKING"}
+              </div>
+              <div style={{ display: "flex", marginTop: "14px", fontSize: `${fitFont(leader.name, 84, 520)}px`, fontWeight: 700, lineHeight: 1.05, whiteSpace: "nowrap", textTransform: "uppercase", color: WHITE }}>
+                {leader.name}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ display: "flex", fontSize: "150px", fontWeight: 700, lineHeight: 1, color: GOLD, textShadow: "0 6px 16px rgba(0,0,0,0.6)" }}>{`${leader.value}`}</div>
+              <div style={{ display: "flex", fontSize: "24px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: WHITE }}>{leader.label}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <RestList items={rest} top={1150} left={80} width={920} />
+      <Footer site={site} />
+    </Canvas>
+  );
+}
+
+function CompactHeader({ logo, title, subtitle, kicker = "RANKING" }: Pick<ArtProps, "logo" | "title" | "subtitle"> & { kicker?: string }) {
+  return (
+    <div style={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center", top: "44px", left: 0, width: `${ART_WIDTH}px` }}>
+      {logo ? <img src={logo} alt="" width={140} height={170} style={{ width: "140px", height: "170px" }} /> : <div style={{ display: "flex", height: "170px" }} />}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "14px" }}>
+        <Star size={20} />
+        <div style={{ display: "flex", fontSize: "26px", fontWeight: 500, letterSpacing: "14px", color: GOLD, paddingLeft: "14px" }}>{kicker}</div>
+        <Star size={20} />
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontSize: `${fitFont(title, 78, 960)}px`,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+          color: WHITE,
+          textShadow: "0 4px 14px rgba(0,0,0,0.9)",
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ display: "flex", fontSize: `${fitSpaced(subtitle, 28, 960, 8)}px`, fontWeight: 700, letterSpacing: "8px", textTransform: "uppercase", whiteSpace: "nowrap", color: RED }}>{subtitle}</div>
+    </div>
+  );
+}
+
+function CardValue({ value, label, size, color }: { value: number; label: string; size: number; color: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
+      <div style={{ display: "flex", fontSize: `${size}px`, fontWeight: 700, lineHeight: 0.9, color }}>{`${value}`}</div>
+      <div style={{ display: "flex", marginBottom: `${Math.round(size * 0.08)}px`, fontSize: `${Math.max(16, Math.round(size * 0.24))}px`, fontWeight: 700, letterSpacing: "3px", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+/** Figurinha: o líder vira uma carta de colecionador e o 2º ao 5º, cartas menores lado a lado. */
+export function CardsArt(props: ArtProps): ReactElement {
+  const [leader, ...rest] = props.items;
+  const smallWidth = 222;
+
+  return (
+    <Canvas>
+      <CompactHeader {...props} />
+      {!leader ? (
+        <EmptyBlock />
+      ) : (
+        <div style={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center", top: "440px", left: 0, width: `${ART_WIDTH}px` }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              width: "620px",
+              padding: "24px",
+              borderRadius: "34px",
+              border: `6px solid ${GOLD}`,
+              background: "linear-gradient(160deg, #f3d77a 0%, #d4af37 18%, #8a0a1f 55%, #1a0306 100%)",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.7)",
+            }}
+          >
+            <div style={{ position: "relative", display: "flex" }}>
+              <Portrait src={leader.photoLarge} name={leader.name} width={560} height={540} radius={22} />
+              <div style={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center", top: "18px", left: "18px", padding: "10px 18px", borderRadius: "18px", backgroundColor: "rgba(10,10,10,0.82)", border: `2px solid ${GOLD}` }}>
+                <div style={{ display: "flex", fontSize: "92px", fontWeight: 700, lineHeight: 1, color: GOLD }}>{`${leader.value}`}</div>
+                <div style={{ display: "flex", fontSize: "20px", fontWeight: 700, letterSpacing: "3px", textTransform: "uppercase", color: WHITE }}>{leader.label}</div>
+              </div>
+              {leader.number ? (
+                <div style={{ position: "absolute", display: "flex", top: "18px", right: "22px", fontSize: "70px", fontWeight: 700, color: WHITE, textShadow: "0 4px 14px rgba(0,0,0,0.9)" }}>{`${leader.number}`}</div>
+              ) : null}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "18px", gap: "16px" }}>
+              <div style={{ display: "flex", fontSize: `${fitFont(leader.name, 76, 420)}px`, fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap", textTransform: "uppercase", color: WHITE }}>{leader.name}</div>
+              <PositionBadge position={1} size={84} background={GOLD} color={BLACK} />
+            </div>
+          </div>
+
+          {rest.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", gap: "18px", marginTop: "40px", width: "960px" }}>
+              {rest.map((item, index) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    width: `${smallWidth}px`,
+                    padding: "14px",
+                    borderRadius: "22px",
+                    border: `3px solid ${index === 0 ? MEDALS[1] : index === 1 ? MEDALS[2] : "rgba(212,175,55,0.45)"}`,
+                    background: "linear-gradient(170deg, rgba(200,16,46,0.55), rgba(20,4,7,0.95) 60%)",
+                    boxShadow: "0 18px 40px rgba(0,0,0,0.55)",
+                  }}
+                >
+                  <div style={{ position: "relative", display: "flex" }}>
+                    <Portrait src={item.photoSmall} name={item.name} width={smallWidth - 34} height={230} radius={14} />
+                    <div style={{ position: "absolute", display: "flex", top: "8px", left: "8px" }}>
+                      <PositionBadge position={index + 2} size={52} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", marginTop: "12px", fontSize: `${fitFont(item.name, 34, smallWidth - 34, 18)}px`, fontWeight: 700, whiteSpace: "nowrap", textTransform: "uppercase", color: WHITE }}>
+                    {item.name}
+                  </div>
+                  <CardValue value={item.value} label={item.label} size={52} color={GOLD} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <Footer site={props.site} />
+    </Canvas>
+  );
+}
+
+const LED_RED = "#ff3b3b";
+const LED_AMBER = "#ffb400";
+
+function LedDigits({ value, color, width, height, fontSize }: { value: string; color: string; width: number; height: number; fontSize: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        width: `${width}px`,
+        height: `${height}px`,
+        borderRadius: "12px",
+        backgroundColor: "#140202",
+        border: "2px solid #2e0808",
+        color,
+        fontSize: `${fontSize}px`,
+        fontWeight: 700,
+        letterSpacing: "4px",
+        textShadow: `0 0 14px ${color}, 0 0 30px ${color}`,
+      }}
+    >
+      {value}
+    </div>
+  );
+}
+
+/** Placar: o ranking num painel de estádio, com números em LED. */
+export function ScoreboardArt(props: ArtProps): ReactElement {
+  const { items } = props;
+  const rowHeight = items.length <= 3 ? 190 : 164;
+
+  return (
+    <Canvas>
+      <Header {...props} />
+      {items.length === 0 ? (
+        <EmptyBlock />
+      ) : (
+        <div
+          style={{
+            position: "absolute",
+            display: "flex",
+            flexDirection: "column",
+            top: "560px",
+            left: "60px",
+            width: "960px",
+            padding: "26px 34px 30px",
+            borderRadius: "30px",
+            backgroundColor: "#070707",
+            border: "10px solid #1d1d1d",
+            boxShadow: `0 0 0 3px ${GOLD}, 0 40px 90px rgba(0,0,0,0.75)`,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "16px", borderBottom: "2px dashed rgba(255,59,59,0.35)" }}>
+            <div style={{ display: "flex", fontSize: "26px", fontWeight: 600, letterSpacing: "8px", color: LED_AMBER, textShadow: `0 0 12px ${LED_AMBER}` }}>POS · JOGADOR</div>
+            <div style={{ display: "flex", fontSize: "26px", fontWeight: 600, letterSpacing: "8px", textTransform: "uppercase", color: LED_AMBER, textShadow: `0 0 12px ${LED_AMBER}` }}>
+              {items[0].label}
+            </div>
+          </div>
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "22px",
+                height: `${rowHeight}px`,
+                borderBottom: index < items.length - 1 ? "2px dashed rgba(255,59,59,0.25)" : "0",
+              }}
+            >
+              <LedDigits value={`${index + 1}`} color={index === 0 ? LED_AMBER : LED_RED} width={96} height={96} fontSize={64} />
+              <Avatar src={item.photoSmall} name={item.name} size={104} ring={index === 0 ? LED_AMBER : "#3a0a0a"} ringWidth={4} />
+              <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", fontSize: `${fitFont(item.name, 54, 420)}px`, fontWeight: 700, whiteSpace: "nowrap", textTransform: "uppercase", color: WHITE }}>{item.name}</div>
+                {item.number ? (
+                  <div style={{ display: "flex", fontSize: "22px", letterSpacing: "5px", color: "rgba(255,255,255,0.5)" }}>{`CAMISA ${item.number}`}</div>
+                ) : null}
+              </div>
+              <LedDigits value={`${item.value}`.padStart(2, "0")} color={index === 0 ? LED_AMBER : LED_RED} width={170} height={110} fontSize={84} />
+            </div>
+          ))}
+        </div>
+      )}
+      <Footer site={props.site} />
+    </Canvas>
+  );
+}
+
+const NEON_RED = "#ff2a4a";
+const NEON_GOLD = "#ffd76a";
+
+function neonText(color: string) {
+  return `0 0 8px ${color}, 0 0 22px ${color}, 0 0 48px ${color}`;
+}
+
+/** Neon: fundo preto com letreiros e molduras brilhando em vermelho e dourado. */
+export function NeonArt(props: ArtProps): ReactElement {
+  const { items, title, subtitle, logo, site } = props;
+
+  return (
+    <div style={{ position: "relative", display: "flex", width: `${ART_WIDTH}px`, height: `${ART_HEIGHT}px`, backgroundColor: "#030303", fontFamily: "Oswald", color: WHITE }}>
+      <div
+        style={{
+          position: "absolute",
+          display: "flex",
+          top: 0,
+          left: 0,
+          width: `${ART_WIDTH}px`,
+          height: `${ART_HEIGHT}px`,
+          background: "radial-gradient(circle at 50% 18%, rgba(255,42,74,0.32), rgba(3,3,3,0) 45%), radial-gradient(circle at 50% 100%, rgba(255,42,74,0.22), rgba(3,3,3,0) 40%)",
+        }}
+      />
+      <div style={{ position: "absolute", display: "flex", top: "34px", left: "34px", width: "1012px", height: "1852px", borderRadius: "40px", border: `3px solid ${NEON_RED}`, boxShadow: `0 0 26px ${NEON_RED}, inset 0 0 26px rgba(255,42,74,0.5)` }} />
+
+      <div style={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center", top: "90px", left: 0, width: `${ART_WIDTH}px` }}>
+        {logo ? <img src={logo} alt="" width={150} height={182} style={{ width: "150px", height: "182px" }} /> : <div style={{ display: "flex", height: "182px" }} />}
+        <div style={{ display: "flex", marginTop: "26px", fontSize: "30px", fontWeight: 500, letterSpacing: "18px", paddingLeft: "18px", color: NEON_GOLD, textShadow: neonText("rgba(255,215,106,0.8)") }}>RANKING</div>
+        <div style={{ display: "flex", marginTop: "4px", fontSize: `${fitFont(title, 92, 900)}px`, fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap", textTransform: "uppercase", color: "#ffe9ec", textShadow: neonText(NEON_RED) }}>
+          {title}
+        </div>
+        <div style={{ display: "flex", marginTop: "6px", fontSize: `${fitSpaced(subtitle, 28, 900, 8)}px`, fontWeight: 600, letterSpacing: "8px", whiteSpace: "nowrap", textTransform: "uppercase", color: "rgba(255,255,255,0.75)" }}>{subtitle}</div>
+      </div>
+
+      {items.length === 0 ? (
+        <EmptyBlock />
+      ) : (
+        // Com menos de 5 jogadores a lista desce para ficar centrada no espaço livre.
+        <div style={{ position: "absolute", display: "flex", flexDirection: "column", gap: "26px", top: `${600 + (5 - items.length) * 93}px`, left: "100px", width: "880px" }}>
+          {items.map((item, index) => {
+            const glow = index === 0 ? NEON_GOLD : NEON_RED;
+            const leader = index === 0;
+            return (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "26px",
+                  height: leader ? "240px" : "160px",
+                  padding: "0 34px",
+                  borderRadius: "26px",
+                  border: `3px solid ${glow}`,
+                  backgroundColor: "rgba(10,2,4,0.85)",
+                  boxShadow: `0 0 22px ${glow}, inset 0 0 18px ${leader ? "rgba(255,215,106,0.35)" : "rgba(255,42,74,0.3)"}`,
+                }}
+              >
+                <div style={{ display: "flex", width: "86px", justifyContent: "center", fontSize: leader ? "76px" : "56px", fontWeight: 700, color: glow, textShadow: neonText(glow) }}>{`${index + 1}`}</div>
+                <Avatar src={leader ? item.photoLarge : item.photoSmall} name={item.name} size={leader ? 176 : 112} ring={glow} ringWidth={4} />
+                <div style={{ display: "flex", flexGrow: 1, minWidth: 0, fontSize: `${fitFont(item.name, leader ? 64 : 46, leader ? 340 : 400)}px`, fontWeight: 700, whiteSpace: "nowrap", textTransform: "uppercase", color: WHITE }}>
+                  {item.name}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}>
+                  <div style={{ display: "flex", fontSize: leader ? "110px" : "68px", fontWeight: 700, lineHeight: 1, color: glow, textShadow: neonText(glow) }}>{`${item.value}`}</div>
+                  <div style={{ display: "flex", fontSize: "20px", fontWeight: 700, letterSpacing: "4px", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>{item.label}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center", top: "1700px", left: 0, width: `${ART_WIDTH}px` }}>
+        <div style={{ display: "flex", fontSize: "24px", fontWeight: 500, letterSpacing: "5px", textTransform: "uppercase", color: "rgba(255,255,255,0.75)" }}>Ranking completo no site oficial</div>
+        <div style={{ display: "flex", marginTop: "12px", fontSize: `${fitFont(site, 44, 760)}px`, fontWeight: 600, letterSpacing: "2px", color: NEON_GOLD, textShadow: neonText("rgba(255,215,106,0.7)") }}>{site}</div>
+      </div>
+    </div>
+  );
+}
+
+const PAPER = "#f1ebde";
+const INK = "#111111";
+
+/** Manchete: capa de jornal esportivo, com o líder na foto principal e o resto na tabela. */
+export function HeadlineArt(props: ArtProps): ReactElement {
+  const { items, title, subtitle, logo, site } = props;
+  const [leader, ...rest] = items;
+  const headline = leader ? `${leader.name} lidera` : title;
+
+  return (
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", width: `${ART_WIDTH}px`, height: `${ART_HEIGHT}px`, backgroundColor: PAPER, fontFamily: "Oswald", color: INK, padding: "64px 70px 0" }}>
+      <div style={{ display: "flex", width: "940px", height: "8px", backgroundColor: INK }} />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "26px", marginTop: "18px" }}>
+        {logo ? <img src={logo} alt="" width={92} height={112} style={{ width: "92px", height: "112px" }} /> : null}
+        <div style={{ display: "flex", fontSize: "100px", fontWeight: 700, letterSpacing: "4px", lineHeight: 1 }}>DIÁRIO DO LEÃO</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "18px", padding: "10px 0", borderTop: `3px solid ${INK}`, borderBottom: `3px solid ${INK}`, fontSize: "22px", fontWeight: 600, letterSpacing: "4px", textTransform: "uppercase" }}>
+        <div style={{ display: "flex" }}>Edição especial</div>
+        <div style={{ display: "flex", color: RED, fontSize: `${fitSpaced(subtitle, 22, 520, 4, 14)}px`, whiteSpace: "nowrap" }}>{subtitle}</div>
+        <div style={{ display: "flex" }}>Ranking</div>
+      </div>
+
+      <div style={{ display: "flex", marginTop: "34px", fontSize: `${fitFont(headline, 150, 940, 60)}px`, fontWeight: 700, lineHeight: 1, letterSpacing: "-1px", whiteSpace: "nowrap", textTransform: "uppercase" }}>{headline}</div>
+      <div style={{ display: "flex", marginTop: "10px", fontSize: `${fitFont(title, 56, 940)}px`, fontWeight: 600, whiteSpace: "nowrap", textTransform: "uppercase", color: RED }}>{title}</div>
+
+      {!leader ? (
+        <div style={{ display: "flex", marginTop: "120px", fontSize: "48px", fontWeight: 700, textTransform: "uppercase", color: "rgba(17,17,17,0.6)" }}>Sem dados para este filtro</div>
+      ) : (
+        <div style={{ display: "flex", gap: "40px", marginTop: "34px" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <Portrait src={leader.photoLarge} name={leader.name} width={460} height={580} border={`5px solid ${INK}`} />
+            <div style={{ display: "flex", marginTop: "10px", fontSize: "20px", letterSpacing: "2px", textTransform: "uppercase", color: "rgba(17,17,17,0.65)" }}>
+              {leader.number ? `${leader.name}, camisa ${leader.number}, no topo` : `${leader.name} no topo do ranking`}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexGrow: 1 }}>
+            <div style={{ display: "flex", fontSize: "34px", fontWeight: 700, letterSpacing: "6px", color: RED }}>1º LUGAR</div>
+            <div style={{ display: "flex", fontSize: "260px", fontWeight: 700, lineHeight: 0.95, color: RED }}>{`${leader.value}`}</div>
+            <div style={{ display: "flex", fontSize: "54px", fontWeight: 700, textTransform: "uppercase", lineHeight: 1 }}>{leader.label}</div>
+            <div style={{ display: "flex", width: "120px", height: "8px", marginTop: "26px", backgroundColor: INK }} />
+            <div style={{ display: "flex", marginTop: "18px", fontSize: "28px", lineHeight: 1.3, color: "rgba(17,17,17,0.8)" }}>Bravura Futebol Clube</div>
+          </div>
+        </div>
+      )}
+
+      {rest.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", marginTop: "36px", borderTop: `4px solid ${INK}` }}>
+          {rest.map((item, index) => (
+            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "22px", height: "112px", borderBottom: "2px solid rgba(17,17,17,0.25)" }}>
+              <div style={{ display: "flex", width: "70px", fontSize: "44px", fontWeight: 700, color: RED }}>{`${index + 2}º`}</div>
+              <div style={{ display: "flex", flexGrow: 1, fontSize: `${fitFont(item.name, 46, 600)}px`, fontWeight: 700, whiteSpace: "nowrap", textTransform: "uppercase" }}>{item.name}</div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
+                <div style={{ display: "flex", fontSize: "52px", fontWeight: 700, lineHeight: 1 }}>{`${item.value}`}</div>
+                <div style={{ display: "flex", fontSize: "20px", fontWeight: 700, letterSpacing: "3px", textTransform: "uppercase", color: "rgba(17,17,17,0.6)", marginBottom: "6px" }}>{item.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ position: "absolute", display: "flex", alignItems: "center", justifyContent: "space-between", left: 0, bottom: 0, width: `${ART_WIDTH}px`, height: "150px", padding: "0 70px", backgroundColor: INK }}>
+        <div style={{ display: "flex", fontSize: "24px", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase", color: "rgba(255,255,255,0.8)" }}>Ranking completo em</div>
+        <div style={{ display: "flex", fontSize: `${fitFont(site, 44, 520)}px`, fontWeight: 600, letterSpacing: "2px", color: GOLD }}>{site}</div>
+      </div>
+    </div>
   );
 }

@@ -5,9 +5,20 @@ export const RANKING_ART_STYLES = [
   { id: "destaque", label: "Destaque" },
   { id: "classica", label: "Clássica" },
   { id: "ouro", label: "Ouro" },
+  { id: "capa", label: "Capa" },
+  { id: "figurinha", label: "Figurinha" },
+  { id: "placar", label: "Placar" },
+  { id: "neon", label: "Neon" },
+  { id: "manchete", label: "Manchete" },
 ] as const;
 
 export type RankingArtStyle = (typeof RANKING_ART_STYLES)[number]["id"];
+
+/** Estilo sorteado ao abrir o compartilhamento — nunca repete o atual quando há outro para escolher. */
+export function randomRankingArtStyle(except?: RankingArtStyle | null): RankingArtStyle {
+  const options = RANKING_ART_STYLES.filter((style) => style.id !== except);
+  return options[Math.floor(Math.random() * options.length)].id;
+}
 
 export type RankingShareItem = {
   id: string;
@@ -15,6 +26,8 @@ export type RankingShareItem = {
   photo?: string;
   value: number;
   label: string;
+  /** Número da camisa, mostrado nas artes que têm espaço para ele. */
+  number?: number;
 };
 
 export type RankingSharePayload = {

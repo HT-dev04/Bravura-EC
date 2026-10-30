@@ -147,15 +147,6 @@ export function getChampionshipSummary(championship: Championship): Championship
   };
 }
 
-export function getChampionshipRanking(championship: Championship, key: ChampionshipStatKey, limit = 5) {
-  const stats = getChampionshipPlayerStats(championship);
-  return championship.players
-    .map((player) => ({ player, value: stats.get(player.id)?.[key] || 0 }))
-    .filter((row) => row.value > 0)
-    .sort((a, b) => b.value - a.value || a.player.number - b.player.number)
-    .slice(0, limit);
-}
-
 export interface ChampionshipTimelineEntry {
   match: ChampionshipMatch;
   result: MatchResult | null;

@@ -7,18 +7,20 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { StatCard } from "@/components/site/StatCard";
 import { ChampionshipLogo } from "@/components/site/ChampionshipCard";
 import { GroupStandingsTable, TeamCrest } from "@/components/site/ChampionshipStandings";
+import { RankingPanel } from "@/components/site/RankingPanel";
 import { Badge } from "@/components/ui/badge";
 import { bravuraLogo } from "@/lib/asset-url";
 import {
   CHAMPIONSHIP_STATUS_LABELS,
   championshipMatchResult,
   getChampionshipPlayerStats,
-  getChampionshipRanking,
   getChampionshipSummary,
   getTeamGroup,
   type ChampionshipPlayerStats,
 } from "@/lib/championship-stats";
+import { championshipShareSubtitle, CHAMPIONSHIP_RANKINGS, getChampionshipRankings } from "@/lib/championship-rankings";
 import { getChampionshipBySlug } from "@/lib/championship-store";
+import { absoluteUrl, siteUrl } from "@/lib/site-url";
 import { getInitials, getValidImageSrc } from "@/lib/image-utils";
 import { cn, formatDate, formatDateLong, formatTime } from "@/lib/utils";
 import type { Championship, ChampionshipMatch, ChampionshipPlayer } from "@/types";
@@ -56,8 +58,9 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
 
   const summary = getChampionshipSummary(championship);
   const playerStats = getChampionshipPlayerStats(championship);
-  const scorers = getChampionshipRanking(championship, "goals");
-  const assists = getChampionshipRanking(championship, "assists");
+  const rankings = getChampionshipRankings(championship);
+  const shareSubtitle = championshipShareSubtitle(championship);
+  const siteLabel = new URL(siteUrl).hostname.replace(/^www\./, "");
   const matches = [...championship.matches].sort((a, b) => +new Date(b.date) - +new Date(a.date));
   const squad = [...championship.players].sort((a, b) => (a.number || 999) - (b.number || 999));
   const cover = getValidImageSrc(championship.cover);
@@ -66,6 +69,7 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
     ...(championship.groups.length > 0 ? [{ id: "classificacao", label: "Classificação" }] : []),
     ...(championship.teams.length > 0 ? [{ id: "times", label: "Times" }] : []),
     { id: "partidas", label: "Partidas" },
+    { id: "rankings", label: "Rankings" },
     { id: "elenco", label: "Elenco" },
   ];
   // Datas só com dia (YYYY-MM-DD): meio-dia evita voltar um dia no fuso do Brasil.
@@ -173,23 +177,49 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ s
         </section>
       )}
 
-      <section id="partidas" className="container-x grid scroll-mt-32 gap-10 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
-        <div className="min-w-0">
-          <h2 className="mb-5 font-display text-2xl uppercase md:text-3xl">Partidas</h2>
-          {matches.length === 0 ? (
-            <p className="rounded-sm border border-brand-border bg-brand-black-2 p-4 text-sm text-brand-gray">Nenhuma partida cadastrada.</p>
-          ) : (
-            <div className="space-y-3">
-              {matches.map((match) => (
-                <ChampionshipMatchCard key={match.id} match={match} championship={championship} />
-              ))}
-            </div>
-          )}
-        </div>
+      <section id="partidas" className="container-x scroll-mt-32 py-6">
+        <h2 className="mb-5 font-display text-2xl uppercase md:text-3xl">Partidas</h2>
+        {matches.length === 0 ? (
+          <p className="rounded-sm border border-brand-border bg-brand-black-2 p-4 text-sm text-brand-gray">Nenhuma partida cadastrada.</p>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {matches.map((match) => (
+              <ChampionshipMatchCard key={match.id} match={match} championship={championship} />
+            ))}
+          </div>
+        )}
+      </section>
 
-        <div className="min-w-0 space-y-8 lg:sticky lg:top-24 lg:self-start">
-          <RankingList title="Artilharia" unit="gols" rows={scorers} championship={championship} />
-          <RankingList title="Assistências" unit="assist." rows={assists} championship={championship} />
+      <section id="rankings" className="container-x scroll-mt-32 py-10">
+        <h2 className="mb-1 font-display text-2xl uppercase md:text-3xl">Rankings</h2>
+        <p className="mb-5 text-sm text-brand-gray">Destaques individuais do Bravura nesta competição. Compartilhe a arte de cada ranking.</p>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {CHAMPIONSHIP_RANKINGS.map((config) => {
+            const href = `/campeonatos/${championship.slug}/rankings/${config.slug}`;
+            return (
+              <RankingPanel
+                key={config.slug}
+                title={config.title}
+                icon={config.icon}
+                accent={config.accent}
+                unit={config.unit}
+                rows={(rankings.get(config.slug) || []).map(({ player, value }) => ({
+                  id: player.id,
+                  name: player.nickname || player.name,
+                  photo: player.photo,
+                  number: player.number,
+                  position: player.position,
+                  href: playerHref(championship, player),
+                  value,
+                }))}
+                shareTitle={config.shareTitle}
+                shareSubtitle={shareSubtitle}
+                shareUrl={absoluteUrl(href)}
+                siteLabel={siteLabel}
+                fullRankingHref={href}
+              />
+            );
+          })}
         </div>
       </section>
 
@@ -298,43 +328,6 @@ function ChampionshipMatchCard({ match, championship }: { match: ChampionshipMat
         </div>
       )}
     </article>
-  );
-}
-
-function RankingList({
-  title,
-  unit,
-  rows,
-  championship,
-}: {
-  title: string;
-  unit: string;
-  rows: { player: ChampionshipPlayer; value: number }[];
-  championship: Championship;
-}) {
-  return (
-    <div>
-      <h2 className="mb-4 font-display text-2xl uppercase">{title}</h2>
-      {rows.length === 0 ? (
-        <p className="rounded-sm border border-brand-border bg-brand-black-2 p-4 text-sm text-brand-gray">Sem registros ainda.</p>
-      ) : (
-        <ol className="divide-y divide-brand-border rounded-sm border border-brand-border bg-brand-black-2">
-          {rows.map(({ player, value }, index) => (
-            <li key={player.id}>
-              <Link href={playerHref(championship, player)} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5">
-                <span className={cn("w-5 font-display text-lg", index === 0 ? "text-brand-gold" : "text-brand-gray")}>{index + 1}</span>
-                <span className="min-w-0 flex-1 truncate font-semibold">
-                  {player.nickname || player.name}
-                  <span className="ml-2 text-xs font-normal text-brand-gray">#{player.number}</span>
-                </span>
-                <span className="font-display text-xl text-brand-red">{value}</span>
-                <span className="w-12 text-[10px] uppercase text-brand-gray">{unit}</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
   );
 }
 
